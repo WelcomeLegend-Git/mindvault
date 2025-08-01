@@ -69,7 +69,7 @@ The app is designed to be expandable with additional study companion features:
 
 ## Minimum Requirements
 
-- Android API Level 35+
+- Android 9 (API 28)
 - Kotlin support
 - Jetpack Compose
 
