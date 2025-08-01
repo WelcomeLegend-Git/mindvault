@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # MindVault - Study Companion App
 
 MindVault is an Android study companion app designed to help you maintain focus during study sessions through an uninterruptible focus mode.
@@ -83,3 +84,6 @@ The app is designed to be expandable with additional study companion features:
 ---
 
 **Note**: This app is designed to be a serious study tool. Once a focus session starts, it cannot be interrupted until completion. Use responsibly and ensure you have adequate time for your selected session duration.
+=======
+# mindvault
+>>>>>>> 34e4ebb58aadc2c22874c8f1c7b8a88f8b405642
