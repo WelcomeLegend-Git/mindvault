@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MindVault</string>
+    <string name="accessibility_service_description">MindVault needs this permission to monitor the apps you open and block them during a focus session. This is essential for the focus mode feature to work correctly.</string>
+    <string name="default_web_client_id">930728313401-5oe9joi4h73spd7e9pqjtesju6vqq2hk.apps.googleusercontent.com</string>
+</resources>
