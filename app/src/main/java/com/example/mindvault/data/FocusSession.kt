@@ -98,6 +98,35 @@ object FocusManager {
         return currentConfiguration
     }
     
+    fun checkAndBlockCurrentlyRunningApps() {
+        if (!::appContext.isInitialized) {
+            Log.w("FocusManager", "FocusManager not initialized, skipping running apps check.")
+            return
+        }
+        
+        if (!isFocusModeActive()) {
+            Log.d("FocusManager", "Focus mode not active, skipping running apps check.")
+            return
+        }
+        
+        Log.d("FocusManager", "Checking for currently running apps to block...")
+        
+        // Send broadcast to trigger the check in the accessibility service
+        val intent = Intent("com.example.mindvault.FOCUS_SESSION_STARTED")
+        appContext.sendBroadcast(intent)
+    }
+    
+    fun sendFocusSessionStartedBroadcast() {
+        if (!::appContext.isInitialized) {
+            Log.w("FocusManager", "FocusManager not initialized, cannot send broadcast.")
+            return
+        }
+        
+        Log.d("FocusManager", "Sending focus session started broadcast...")
+        val intent = Intent("com.example.mindvault.FOCUS_SESSION_STARTED")
+        appContext.sendBroadcast(intent)
+    }
+    
     fun getCurrentActiveSlot(): TimeSlot? {
         if (!::appContext.isInitialized) {
             Log.e("FocusManager", "FocusManager not initialized! Cannot get active slot")
@@ -173,6 +202,9 @@ object FocusManager {
                     blockedApps = currentConfiguration.selectedApps
                 )
                 Log.d("FocusManager", "Started focus session: ${activeSlot.type}")
+                
+                // Check and block currently running apps when session starts
+                checkAndBlockCurrentlyRunningApps()
             }
             
             _activeSlotFlow.value = activeSlot
