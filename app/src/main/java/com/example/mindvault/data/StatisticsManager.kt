@@ -3,6 +3,7 @@ package com.example.mindvault.data
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.mindvault.utils.DataValidationHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDate
@@ -78,8 +79,13 @@ object StatisticsManager {
     fun init(context: Context) {
         this.context = context.applicationContext
         this.prefs = context.getSharedPreferences("mindvault_stats", Context.MODE_PRIVATE)
+        
+        // Validate and clean data on initialization
+        DataValidationHelper.validateAndCleanAllData(context)
+        DataValidationHelper.logDataIntegrityReport(context)
+        
         loadStats()
-        Log.d("StatisticsManager", "Statistics Manager initialized")
+        Log.d("StatisticsManager", "Statistics Manager initialized with data validation")
     }
     
     fun isInitialized(): Boolean {
@@ -189,11 +195,11 @@ object StatisticsManager {
             weekStart = weekStart,
             dailyStats = dailyStatsList,
             totalFocusTime = totalWeeklyFocus,
-            averageDailyFocus = totalWeeklyFocus / 7,
+            averageDailyFocus = if (dailyStatsList.isNotEmpty()) totalWeeklyFocus / dailyStatsList.size else 0L,
             bestDay = findBestDay(dailyStatsList),
             longestStreak = longestStreak,
             currentStreak = currentStreak,
-            weeklyGoalProgress = (totalWeeklyFocus.toFloat() / weeklyGoal * 100).coerceAtMost(100f)
+            weeklyGoalProgress = if (weeklyGoal > 0) (totalWeeklyFocus.toFloat() / weeklyGoal * 100).coerceAtMost(100f) else 0f
         )
     }
     
@@ -237,6 +243,25 @@ object StatisticsManager {
         val sessionDuration = if (session.endTime != null) {
             ChronoUnit.MINUTES.between(session.startTime, session.endTime)
         } else 0L
+        
+        // Validate session data before updating
+        val isValid = DataValidationHelper.validateSessionRecord(
+            session.startTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            session.endTime?.atZone(java.time.ZoneId.systemDefault())?.toInstant()?.toEpochMilli(),
+            sessionDuration,
+            session.distractionCount
+        )
+        
+        if (!isValid) {
+            Log.w("StatisticsManager", "Invalid session data, skipping update")
+            return
+        }
+        
+        // Validate session duration
+        if (sessionDuration <= 0) {
+            Log.w("StatisticsManager", "Invalid session duration: $sessionDuration minutes")
+            return
+        }
         
         val editor = prefs.edit()
         
@@ -285,6 +310,12 @@ object StatisticsManager {
         val sessionDuration = if (session.endTime != null) {
             ChronoUnit.MINUTES.between(session.startTime, session.endTime)
         } else 0L
+        
+        // Validate session duration
+        if (sessionDuration <= 0) {
+            Log.w("StatisticsManager", "Invalid session duration for user stats: $sessionDuration minutes")
+            return
+        }
         
         val editor = prefs.edit()
         
@@ -367,8 +398,8 @@ object StatisticsManager {
     
     private fun getTopBlockedApps(date: LocalDate): List<String> {
         // This would typically query a database of blocked app interactions
-        // For now, return some sample data
-        return listOf("com.instagram.android", "com.twitter.android", "com.tiktok")
+        // For now, return empty list to avoid dummy data
+        return emptyList()
     }
     
     private fun findBestDay(dailyStats: List<DailyStats>): LocalDate? {
@@ -380,7 +411,7 @@ object StatisticsManager {
         return if (achievementsString.isNullOrEmpty()) {
             emptyList()
         } else {
-            achievementsString.split(",")
+            achievementsString.split(",").filter { it.isNotEmpty() }
         }
     }
     
@@ -438,7 +469,39 @@ object StatisticsManager {
      */
     fun hadFocusOn(date: java.time.LocalDate): Boolean {
         val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val minutes = prefs.getLong("daily_focus_${'$'}{dateKey}", 0L)
+        val minutes = prefs.getLong("daily_focus_${dateKey}", 0L)
         return minutes >= 30L
+    }
+    
+    /**
+     * Clear all statistics data for testing/reset purposes
+     */
+    fun clearAllStats() {
+        prefs.edit().clear().apply()
+        loadStats()
+        Log.d("StatisticsManager", "All statistics cleared")
+    }
+    
+    /**
+     * Validate and clean up any corrupted data
+     */
+    fun validateAndCleanData() {
+        val today = LocalDate.now()
+        val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        
+        // Check for negative values and reset them
+        val focusTime = prefs.getLong("daily_focus_${dateKey}", 0L)
+        if (focusTime < 0) {
+            prefs.edit().putLong("daily_focus_${dateKey}", 0L).apply()
+            Log.w("StatisticsManager", "Fixed negative focus time")
+        }
+        
+        // Check for unrealistic values and cap them
+        if (focusTime > 1440) { // More than 24 hours in a day
+            prefs.edit().putLong("daily_focus_${dateKey}", 1440L).apply()
+            Log.w("StatisticsManager", "Capped unrealistic focus time")
+        }
+        
+        loadStats()
     }
 }

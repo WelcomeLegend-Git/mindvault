@@ -414,7 +414,7 @@ fun TodayScreenTimeCard() {
     // Load usage stats asynchronously to avoid blocking UI
     val totalUsage by produceState(initialValue = emptyList<Pair<String, Int>>(/*name, minutes*/)) {
         value = withContext(Dispatchers.IO) {
-            UsageStatsHelper.getTodayUsageStats(context)
+            UsageStatsHelper.getValidatedTodayUsageStats(context)
                 .mapValues { (_, v) -> (v / 60000L).toInt() }
                 .toList()
                 .filter { it.second > 0 }
@@ -426,13 +426,9 @@ fun TodayScreenTimeCard() {
 
     val focusUsage by produceState(initialValue = emptyList<Pair<String, Int>>()) {
         value = withContext(Dispatchers.IO) {
-            val focusData = UsageStatsHelper.getUsageDuringFocus(context)
+            val focusData = UsageStatsHelper.getValidatedUsageDuringFocus(context)
             android.util.Log.d("FocusDebug", "Focus sessions data: ${focusData.size} apps")
-            // For now, force empty until we verify focus sessions are being recorded
-            emptyList<Pair<String, Int>>()
             
-            // Original logic (commented out until focus sessions work):
-            /*
             focusData
                 .mapValues { (_, v) -> (v / 60000L).toInt() }
                 .toList()
@@ -440,7 +436,6 @@ fun TodayScreenTimeCard() {
                 .sortedByDescending { it.second }
                 .take(5)
                 .map { AppManager.getAppName(context, it.first) to it.second }
-            */
         }
     }
 
@@ -543,6 +538,68 @@ fun AppUsageSection(title: String, usageList: List<Pair<String, Int>>, totalMinu
                     trackColor = Color.White.copy(alpha = 0.1f)
                 )
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AppUsagePieSection(
+    title: String,
+    usageList: List<Pair<String, Int>>,
+    totalMinutes: Int
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Default.PieChart,
+                contentDescription = null,
+                tint = Color(0xFF00E676),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = title,
+                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "${totalMinutes}m",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        if (usageList.isEmpty()) {
+            Text(
+                text = "No usage data available",
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 14.sp
+            )
+        } else {
+            usageList.forEach { (appName, minutes) ->
+                val percent = if (totalMinutes > 0) minutes / totalMinutes.toFloat() else 0f
+                Column {
+                    Text(
+                        text = appName,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 12.sp
+                    )
+                    LinearProgressIndicator(
+                        progress = percent,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = Color(0xFF00E676),
+                        trackColor = Color.White.copy(alpha = 0.1f)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
         }
     }
@@ -1247,25 +1304,28 @@ fun AdvancedAnalyticsCard() {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Sample analytics content
+            // Real analytics based on actual data
+            val dailyStats by StatisticsManager.dailyStats.collectAsStateWithLifecycle()
+            val userStats by StatisticsManager.userStats.collectAsStateWithLifecycle()
+            
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 AnalyticsMetric(
-                    title = "Peak Hours",
-                    value = "2-4 PM",
-                    trend = "+12%"
+                    title = "Productivity",
+                    value = "${dailyStats?.productivityScore?.roundToInt() ?: 0}%",
+                    trend = if ((dailyStats?.productivityScore ?: 0f) > 80f) "+Good" else "Needs Focus"
                 )
                 AnalyticsMetric(
-                    title = "Efficiency",
-                    value = "87%",
-                    trend = "+5%"
+                    title = "Sessions",
+                    value = "${dailyStats?.completedSessions ?: 0}/${dailyStats?.totalSessions ?: 0}",
+                    trend = if ((dailyStats?.completedSessions ?: 0) > 0) "Active" else "Start Session"
                 )
                 AnalyticsMetric(
-                    title = "Focus Score",
-                    value = "9.2/10",
-                    trend = "+0.3"
+                    title = "Level",
+                    value = "${userStats?.level ?: 1}",
+                    trend = "Level ${userStats?.level ?: 1}"
                 )
             }
         }
@@ -1480,4 +1540,656 @@ fun ExportOption(
             textAlign = TextAlign.Center
         )
     }
+}
+
+@Composable
+fun WeeklyHeroStatsCard(weeklyStats: com.example.mindvault.data.WeeklyStats?, userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(28.dp),
+                ambientColor = Color(0xFF6C63FF).copy(alpha = 0.3f),
+                spotColor = Color(0xFF6C63FF).copy(alpha = 0.3f)
+            ),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color(0xFF6C63FF),
+                            Color(0xFF3F3D56),
+                            Color(0xFF2F2E41)
+                        )
+                    )
+                )
+                .padding(24.dp)
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "This Week",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "${weeklyStats?.totalFocusTime ?: 0}m",
+                            color = Color.White,
+                            fontSize = 48.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                    
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Text(
+                            text = "${weeklyStats?.weeklyGoalProgress?.roundToInt() ?: 0}%",
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(20.dp))
+                
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    QuickStatItem(
+                        title = "Daily Avg",
+                        value = "${weeklyStats?.averageDailyFocus ?: 0}m",
+                        icon = Icons.Default.Schedule
+                    )
+                    QuickStatItem(
+                        title = "Streak",
+                        value = "${userStats?.currentStreak ?: 0}d",
+                        icon = Icons.Default.LocalFireDepartment
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyBarChartSection(weeklyStats: com.example.mindvault.data.WeeklyStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Weekly Progress",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val days = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+            val maxFocus = weeklyStats?.dailyStats?.maxOfOrNull { it.totalFocusTime } ?: 1L
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                weeklyStats?.dailyStats?.forEachIndexed { index, dayStats ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        val progress = if (maxFocus > 0) dayStats.totalFocusTime.toFloat() / maxFocus else 0f
+                        Box(
+                            modifier = Modifier
+                                .width(24.dp)
+                                .height((120 * progress).dp)
+                                .background(
+                                    Color(0xFF6C63FF),
+                                    RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
+                                )
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = days.getOrNull(index) ?: "",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun WeeklyScreenTimeChart() {
+    val context = LocalContext.current
+    val weeklyUsage by produceState(initialValue = emptyList<Pair<String, Int>>()) {
+        value = withContext(Dispatchers.IO) {
+            val end = System.currentTimeMillis()
+            val start = end - (7 * 24 * 60 * 60 * 1000L) // 7 days ago
+            UsageStatsHelper.getValidatedUsageStatsForRange(context, start, end)
+                .mapValues { (_, v) -> (v / 60000L).toInt() }
+                .toList()
+                .filter { it.second > 0 }
+                .sortedByDescending { it.second }
+                .take(5)
+                .map { AppManager.getAppName(context, it.first) to it.second }
+        }
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Weekly Screen Time",
+                color = Color.White,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            if (weeklyUsage.isEmpty()) {
+                Text(
+                    text = "No usage data available",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp
+                )
+            } else {
+                weeklyUsage.forEach { (appName, minutes) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = appName,
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "${minutes}m",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ProductivityTrendsCard(weeklyStats: com.example.mindvault.data.WeeklyStats?, userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.TrendingUp,
+                    contentDescription = "Trends",
+                    tint = Color(0xFF00E676),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Productivity Trends",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val avgProductivity = weeklyStats?.dailyStats?.map { it.productivityScore }?.average() ?: 0.0
+            val bestDay = weeklyStats?.bestDay
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Avg Productivity",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${avgProductivity.roundToInt()}%",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Best Day",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = bestDay?.format(java.time.format.DateTimeFormatter.ofPattern("MMM dd")) ?: "N/A",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FocusHeatmapCard(userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Whatshot,
+                    contentDescription = "Heatmap",
+                    tint = Color(0xFFFF5722),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Focus Heatmap",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Simple heatmap showing focus intensity
+            val currentStreak = userStats?.currentStreak ?: 0
+            val longestStreak = userStats?.longestStreak ?: 0
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Current Streak",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${currentStreak} days",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Longest Streak",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${longestStreak} days",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun MonthlyProgressCard(userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = "Monthly",
+                    tint = Color(0xFF2196F3),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Monthly Progress",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val monthlyGoal = userStats?.monthlyGoal ?: 0L
+            val totalHours = userStats?.totalFocusHours ?: 0L
+            val progress = if (monthlyGoal > 0) (totalHours.toFloat() / monthlyGoal * 100).coerceAtMost(100f) else 0f
+            
+            Column {
+                Text(
+                    text = "Goal: ${monthlyGoal}m",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 14.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                LinearProgressIndicator(
+                    progress = progress / 100f,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                    color = Color(0xFF2196F3),
+                    trackColor = Color.White.copy(alpha = 0.1f)
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${progress.roundToInt()}% Complete",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PersonalBestsCard(userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = "Bests",
+                    tint = Color(0xFFFFD700),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Personal Bests",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Longest Streak",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${userStats?.longestStreak ?: 0} days",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Total Hours",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${userStats?.totalFocusHours ?: 0}h",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DataInsightsCard(dailyStats: com.example.mindvault.data.DailyStats?, weeklyStats: com.example.mindvault.data.WeeklyStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Psychology,
+                    contentDescription = "Insights",
+                    tint = Color(0xFF9C27B0),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Data Insights",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            val insights = generateDataInsights(dailyStats, weeklyStats)
+            insights.forEach { insight ->
+                InsightItem(insight)
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun AllTimeStatsCard(userStats: com.example.mindvault.data.UserStats?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White.copy(alpha = 0.05f)
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.History,
+                    contentDescription = "All Time",
+                    tint = Color(0xFF607D8B),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "All-Time Statistics",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Total Sessions",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${userStats?.totalSessions ?: 0}",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Avg Session",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${userStats?.averageSessionLength ?: 0}m",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "Level",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "${userStats?.level ?: 1}",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Column {
+                    Text(
+                        text = "Rank",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = userStats?.rank ?: "Beginner",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun generateDataInsights(dailyStats: com.example.mindvault.data.DailyStats?, weeklyStats: com.example.mindvault.data.WeeklyStats?): List<String> {
+    val insights = mutableListOf<String>()
+    
+    dailyStats?.let { stats ->
+        if (stats.totalFocusTime > 0) {
+            insights.add("You focused for ${stats.totalFocusTime} minutes today")
+        }
+        
+        if (stats.completedSessions > 0) {
+            val completionRate = (stats.completedSessions.toFloat() / stats.totalSessions * 100).roundToInt()
+            insights.add("Session completion rate: ${completionRate}%")
+        }
+        
+        if (stats.distractionCount == 0) {
+            insights.add("Perfect focus - no distractions recorded!")
+        } else if (stats.distractionCount < 3) {
+            insights.add("Great self-control with only ${stats.distractionCount} distractions")
+        }
+    }
+    
+    weeklyStats?.let { stats ->
+        if (stats.totalFocusTime > 0) {
+            insights.add("Weekly total: ${stats.totalFocusTime} minutes of focus time")
+        }
+        
+        if (stats.currentStreak > 0) {
+            insights.add("Current streak: ${stats.currentStreak} days")
+        }
+    }
+    
+    if (insights.isEmpty()) {
+        insights.add("Start your first focus session to see insights!")
+    }
+    
+    return insights
 }

@@ -60,24 +60,30 @@ object UsageStatsHelper {
      */
     fun getUsageDuringFocus(context: Context): Map<String, Long> {
         val sessions = getTodayFocusSessions(context)
-        if (sessions.isEmpty()) return emptyMap()
+        if (sessions.isEmpty()) {
+            Log.d("UsageStatsHelper", "No focus sessions found for today")
+            return emptyMap()
+        }
 
         val usageManager =
             context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val aggregate = mutableMapOf<String, Long>()
 
         for ((start, end) in sessions) {
+            Log.d("UsageStatsHelper", "Processing focus session: ${end - start}ms")
             val slice = usageManager.queryAndAggregateUsageStats(start, end)
             slice.forEach { (pkg, stat) ->
                 val current = aggregate[pkg] ?: 0L
                 aggregate[pkg] = current + stat.totalTimeInForeground
             }
         }
+        
+        Log.d("UsageStatsHelper", "Found usage data for ${aggregate.size} apps during focus sessions")
         return aggregate
     }
 
     /**
-     * Reads today’s focus session time windows from SharedPreferences.
+     * Reads today's focus session time windows from SharedPreferences.
      * Stored under key "sessions_yyyy-MM-dd" as JSON array
      * [{"start": epochMillis, "end": epochMillis}, ...].
      */
@@ -85,17 +91,66 @@ object UsageStatsHelper {
         val prefs = context.getSharedPreferences("mindvault_stats", Context.MODE_PRIVATE)
         val dateKey = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val jsonString = prefs.getString("sessions_$dateKey", null) ?: return emptyList()
+        
         return try {
             val arr = JSONArray(jsonString)
-            (0 until arr.length()).mapNotNull { idx ->
-                val obj: JSONObject = arr.optJSONObject(idx) ?: return@mapNotNull null
+            val sessions = mutableListOf<Pair<Long, Long>>()
+            
+            for (i in 0 until arr.length()) {
+                val obj: JSONObject = arr.optJSONObject(i) ?: continue
                 val start = obj.optLong("start", -1L)
                 val end = obj.optLong("end", -1L)
-                if (start >= 0 && end >= 0) start to end else null
+                
+                if (start >= 0 && end >= 0 && end > start) {
+                    sessions.add(start to end)
+                }
             }
+            
+            Log.d("UsageStatsHelper", "Found ${sessions.size} valid focus sessions for today")
+            sessions
         } catch (e: Exception) {
             Log.e("UsageStatsHelper", "Failed to parse sessions JSON", e)
             emptyList()
         }
+    }
+    
+    /**
+     * Validates usage stats data for accuracy
+     */
+    fun validateUsageStats(usageStats: Map<String, Long>): Map<String, Long> {
+        return usageStats.filter { (_, timeInMs) ->
+            // Filter out unrealistic values (more than 24 hours in a day)
+            timeInMs <= 24 * 60 * 60 * 1000L
+        }.filter { (packageName, _) ->
+            // Filter out system packages that shouldn't be counted
+            !packageName.startsWith("com.android.") &&
+            !packageName.startsWith("android.") &&
+            !packageName.startsWith("com.google.android.") &&
+            packageName != "android"
+        }
+    }
+    
+    /**
+     * Get usage stats with validation applied
+     */
+    fun getValidatedTodayUsageStats(context: Context): Map<String, Long> {
+        val rawStats = getTodayUsageStats(context)
+        return validateUsageStats(rawStats)
+    }
+    
+    /**
+     * Get focus session usage with validation applied
+     */
+    fun getValidatedUsageDuringFocus(context: Context): Map<String, Long> {
+        val rawStats = getUsageDuringFocus(context)
+        return validateUsageStats(rawStats)
+    }
+    
+    /**
+     * Get validated usage stats for a specific range
+     */
+    fun getValidatedUsageStatsForRange(context: Context, startMillis: Long, endMillis: Long): Map<String, Long> {
+        val rawStats = getUsageStatsForRange(context, startMillis, endMillis)
+        return validateUsageStats(rawStats)
     }
 }
