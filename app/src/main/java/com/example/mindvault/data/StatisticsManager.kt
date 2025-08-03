@@ -45,6 +45,13 @@ data class WeeklyStats(
 )
 
 data class UserStats(
+    /**
+     * Total focus time accumulated by the user in minutes (higher precision than hours).
+     */
+    val totalFocusMinutes: Long,
+    /**
+     * Convenience field derived from [totalFocusMinutes] so we do not break the existing UI.
+     */
     val totalFocusHours: Long,
     val totalSessions: Int,
     val averageSessionLength: Long, // in minutes
@@ -62,6 +69,8 @@ data class UserStats(
 object StatisticsManager {
     private lateinit var context: Context
     private lateinit var prefs: SharedPreferences
+    // Key used to store total focus time with minute-level precision
+    private const val KEY_TOTAL_FOCUS_MINUTES = "total_focus_minutes"
     
     private val _currentSession = MutableStateFlow<FocusSessionRecord?>(null)
     val currentSession = _currentSession.asStateFlow()
@@ -198,15 +207,21 @@ object StatisticsManager {
     }
     
     private fun loadUserStats() {
-        val totalHours = prefs.getLong("total_focus_hours", 0L)
+        // Prefer minute-level precision if available, otherwise fall back to the legacy hours key.
+        val totalMinutes = prefs.getLong(KEY_TOTAL_FOCUS_MINUTES, -1L).let {
+            if (it >= 0) it else prefs.getLong("total_focus_hours", 0L) * 60
+        }
+
+        val totalHours = totalMinutes / 60
         val totalSessions = prefs.getInt("total_sessions", 0)
-        val avgSessionLength = if (totalSessions > 0) totalHours * 60 / totalSessions else 0L
+        val avgSessionLength = if (totalSessions > 0) totalMinutes / totalSessions else 0L
         val currentStreak = calculateCurrentStreak()
         val longestStreak = prefs.getInt("longest_streak", 0)
         val xp = prefs.getInt("experience_points", 0)
         val level = calculateLevel(xp)
         
         _userStats.value = UserStats(
+            totalFocusMinutes = totalMinutes,
             totalFocusHours = totalHours,
             totalSessions = totalSessions,
             averageSessionLength = avgSessionLength,
@@ -266,14 +281,25 @@ object StatisticsManager {
         
         // Update distractions
         val currentDistractions = prefs.getInt("daily_distractions_${dateKey}", 0)
-        editor.putInt("daily_distractions_${dateKey}", currentDistractions + session.distractionCount)
-        
-        // Calculate productivity score
+        val totalDistractions = currentDistractions + session.distractionCount
+        editor.putInt("daily_distractions_${dateKey}", totalDistractions)
+
+        // Persist blocked-app occurrences so we can compute the real top list later.
+        val blockedKey = "daily_blocked_apps_${dateKey}"
+        val blockedJson = prefs.getString(blockedKey, "{}")
+        val blockedObj = org.json.JSONObject(blockedJson)
+        for (pkg in session.blockedApps) {
+            val count = blockedObj.optInt(pkg, 0) + 1
+            blockedObj.put(pkg, count)
+        }
+        editor.putString(blockedKey, blockedObj.toString())
+
+        // Calculate productivity score using the aggregated distraction count for the day.
         val completionRate = if (totalSessions + 1 > 0) {
             (prefs.getInt("daily_completed_${dateKey}", 0) + if (session.isCompleted) 1 else 0).toFloat() / (totalSessions + 1)
         } else 1f
-        
-        val distractionPenalty = (session.distractionCount * 5).coerceAtMost(30)
+
+        val distractionPenalty = (totalDistractions * 5).coerceAtMost(30)
         val productivityScore = ((completionRate * 100) - distractionPenalty).coerceAtLeast(0f)
         editor.putFloat("daily_productivity_${dateKey}", productivityScore)
         
@@ -285,12 +311,16 @@ object StatisticsManager {
         val sessionDuration = if (session.endTime != null) {
             ChronoUnit.MINUTES.between(session.startTime, session.endTime)
         } else 0L
-        
+
         val editor = prefs.edit()
-        
-        // Update total hours
-        val currentHours = prefs.getLong("total_focus_hours", 0L)
-        editor.putLong("total_focus_hours", currentHours + (sessionDuration / 60))
+
+        // Update total minutes (higher precision)
+        val currentMinutes = prefs.getLong(KEY_TOTAL_FOCUS_MINUTES, 0L)
+        val newTotalMinutes = currentMinutes + sessionDuration
+        editor.putLong(KEY_TOTAL_FOCUS_MINUTES, newTotalMinutes)
+
+        // Maintain legacy hours key for backward compatibility
+        editor.putLong("total_focus_hours", newTotalMinutes / 60)
         
         // Update total sessions
         val totalSessions = prefs.getInt("total_sessions", 0)
@@ -366,9 +396,21 @@ object StatisticsManager {
     }
     
     private fun getTopBlockedApps(date: LocalDate): List<String> {
-        // This would typically query a database of blocked app interactions
-        // For now, return some sample data
-        return listOf("com.instagram.android", "com.twitter.android", "com.tiktok")
+        val key = "daily_blocked_apps_${date.format(DateTimeFormatter.ISO_LOCAL_DATE)}"
+        val jsonString = prefs.getString(key, null) ?: return emptyList()
+        return try {
+            val obj = org.json.JSONObject(jsonString)
+            // Collect pairs of (package, count)
+            obj.keys().asSequence()
+                .map { it to obj.optInt(it, 0) }
+                .sortedByDescending { it.second }
+                .take(3)
+                .map { it.first }
+                .toList()
+        } catch (e: Exception) {
+            Log.e("StatisticsManager", "Failed to parse blocked app stats", e)
+            emptyList()
+        }
     }
     
     private fun findBestDay(dailyStats: List<DailyStats>): LocalDate? {

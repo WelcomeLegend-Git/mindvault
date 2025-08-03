@@ -167,7 +167,8 @@ fun MonthlyProgressCard(userStats: UserStats?) {
             Spacer(modifier = Modifier.height(16.dp))
             
             val monthlyGoal = userStats?.monthlyGoal ?: 5000L
-            val currentProgress = (userStats?.totalFocusHours ?: 0L) * 60 // Convert to minutes
+            // Total minutes now provided directly by the data layer (higher precision)
+            val currentProgress = userStats?.totalFocusMinutes ?: ((userStats?.totalFocusHours ?: 0L) * 60)
             val progressPercent = (currentProgress.toFloat() / monthlyGoal * 100).coerceAtMost(100f)
             
             Column {
