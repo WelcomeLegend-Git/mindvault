@@ -103,14 +103,16 @@ fun FocusHeatmapCard(userStats: UserStats?) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Get context outside remember block
+            val context = androidx.compose.ui.platform.LocalContext.current
+            
             // Generate real heatmap data from StatisticsManager
-            val heatmapData = remember {
+            val heatmapData = remember(context) {
                 (0..29).map { dayOffset ->
                     val date = LocalDate.now().minusDays(dayOffset.toLong())
                     val hasFocus = com.example.mindvault.data.StatisticsManager.hadFocusOn(date)
                     val intensity = if (hasFocus) {
                         // Get actual focus time for intensity calculation
-                        val context = androidx.compose.ui.platform.LocalContext.current
                         val prefs = context.getSharedPreferences("mindvault_stats", android.content.Context.MODE_PRIVATE)
                         val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
                         val focusMinutes = prefs.getLong("daily_focus_${dateKey}", 0L)
