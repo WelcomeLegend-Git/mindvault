@@ -428,19 +428,15 @@ fun TodayScreenTimeCard() {
         value = withContext(Dispatchers.IO) {
             val focusData = UsageStatsHelper.getUsageDuringFocus(context)
             android.util.Log.d("FocusDebug", "Focus sessions data: ${focusData.size} apps")
-            // For now, force empty until we verify focus sessions are being recorded
-            emptyList<Pair<String, Int>>()
             
-            // Original logic (commented out until focus sessions work):
-            /*
+            // Process the actual focus data
             focusData
-                .mapValues { (_, v) -> (v / 60000L).toInt() }
+                .mapValues { (_, v) -> (v / 60000L).toInt() } // Convert to minutes
                 .toList()
-                .filter { it.second > 0 }
+                .filter { it.second > 0 } // Only include apps with actual usage
                 .sortedByDescending { it.second }
                 .take(5)
                 .map { AppManager.getAppName(context, it.first) to it.second }
-            */
         }
     }
 

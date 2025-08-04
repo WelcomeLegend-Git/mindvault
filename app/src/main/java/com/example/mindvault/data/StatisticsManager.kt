@@ -134,20 +134,31 @@ object StatisticsManager {
         val today = LocalDate.now()
         val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
         
-        val totalFocusTime = prefs.getLong("daily_focus_${dateKey}", 0L)
-        val studyTime = prefs.getLong("daily_study_${dateKey}", 0L)
-        val restTime = prefs.getLong("daily_rest_${dateKey}", 0L)
-        val completedSessions = prefs.getInt("daily_completed_${dateKey}", 0)
-        val totalSessions = prefs.getInt("daily_total_${dateKey}", 0)
-        val distractionCount = prefs.getInt("daily_distractions_${dateKey}", 0)
-        val productivityScore = prefs.getFloat("daily_productivity_${dateKey}", 100f)
+        val totalFocusTime = prefs.getLong("daily_focus_${dateKey}", 0L).coerceAtLeast(0L)
+        val studyTime = prefs.getLong("daily_study_${dateKey}", 0L).coerceAtLeast(0L)
+        val restTime = prefs.getLong("daily_rest_${dateKey}", 0L).coerceAtLeast(0L)
+        val completedSessions = prefs.getInt("daily_completed_${dateKey}", 0).coerceAtLeast(0)
+        val totalSessions = prefs.getInt("daily_total_${dateKey}", 0).coerceAtLeast(0)
+        val distractionCount = prefs.getInt("daily_distractions_${dateKey}", 0).coerceAtLeast(0)
+        
+        // Ensure data consistency
+        val validatedStudyTime = studyTime.coerceAtMost(totalFocusTime)
+        val validatedRestTime = restTime.coerceAtMost(totalFocusTime - validatedStudyTime)
+        val validatedCompletedSessions = completedSessions.coerceAtMost(totalSessions)
+        
+        // Calculate productivity score if sessions exist
+        val productivityScore = if (totalSessions > 0) {
+            prefs.getFloat("daily_productivity_${dateKey}", 0f).coerceIn(0f, 100f)
+        } else {
+            100f // Default score when no sessions exist
+        }
         
         _dailyStats.value = DailyStats(
             date = today,
             totalFocusTime = totalFocusTime,
-            studyTime = studyTime,
-            restTime = restTime,
-            completedSessions = completedSessions,
+            studyTime = validatedStudyTime,
+            restTime = validatedRestTime,
+            completedSessions = validatedCompletedSessions,
             totalSessions = totalSessions,
             distractionCount = distractionCount,
             productivityScore = productivityScore,
@@ -235,23 +246,26 @@ object StatisticsManager {
         val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
         
         val sessionDuration = if (session.endTime != null) {
-            ChronoUnit.MINUTES.between(session.startTime, session.endTime)
+            ChronoUnit.MINUTES.between(session.startTime, session.endTime).coerceAtLeast(0L)
         } else 0L
         
         val editor = prefs.edit()
         
-        // Update totals
+        // Update totals with validation
         val currentFocus = prefs.getLong("daily_focus_${dateKey}", 0L)
-        editor.putLong("daily_focus_${dateKey}", currentFocus + sessionDuration)
+        val newFocusTotal = (currentFocus + sessionDuration).coerceAtMost(1440L) // Max 24 hours per day
+        editor.putLong("daily_focus_${dateKey}", newFocusTotal)
         
         when (session.type) {
             "STUDY_TIME" -> {
                 val currentStudy = prefs.getLong("daily_study_${dateKey}", 0L)
-                editor.putLong("daily_study_${dateKey}", currentStudy + sessionDuration)
+                val newStudyTotal = (currentStudy + sessionDuration).coerceAtMost(newFocusTotal)
+                editor.putLong("daily_study_${dateKey}", newStudyTotal)
             }
             "REST_TIME" -> {
                 val currentRest = prefs.getLong("daily_rest_${dateKey}", 0L)
-                editor.putLong("daily_rest_${dateKey}", currentRest + sessionDuration)
+                val newRestTotal = (currentRest + sessionDuration).coerceAtMost(newFocusTotal)
+                editor.putLong("daily_rest_${dateKey}", newRestTotal)
             }
         }
         
@@ -264,17 +278,22 @@ object StatisticsManager {
             editor.putInt("daily_completed_${dateKey}", completedSessions + 1)
         }
         
-        // Update distractions
+        // Update distractions with validation
         val currentDistractions = prefs.getInt("daily_distractions_${dateKey}", 0)
-        editor.putInt("daily_distractions_${dateKey}", currentDistractions + session.distractionCount)
+        val validatedDistractions = session.distractionCount.coerceAtLeast(0)
+        editor.putInt("daily_distractions_${dateKey}", currentDistractions + validatedDistractions)
         
-        // Calculate productivity score
-        val completionRate = if (totalSessions + 1 > 0) {
-            (prefs.getInt("daily_completed_${dateKey}", 0) + if (session.isCompleted) 1 else 0).toFloat() / (totalSessions + 1)
-        } else 1f
+        // Calculate realistic productivity score
+        val completedCount = prefs.getInt("daily_completed_${dateKey}", 0) + if (session.isCompleted) 1 else 0
+        val totalCount = totalSessions + 1
+        val completionRate = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
         
-        val distractionPenalty = (session.distractionCount * 5).coerceAtMost(30)
-        val productivityScore = ((completionRate * 100) - distractionPenalty).coerceAtLeast(0f)
+        // More realistic productivity calculation
+        val baseScore = completionRate * 70f // Completion contributes 70% max
+        val focusBonus = minOf(30f, (sessionDuration / 60f) * 5f) // Focus time contributes up to 30%
+        val distractionPenalty = minOf(40f, validatedDistractions * 8f) // Distraction penalty up to 40%
+        
+        val productivityScore = (baseScore + focusBonus - distractionPenalty).coerceIn(0f, 100f)
         editor.putFloat("daily_productivity_${dateKey}", productivityScore)
         
         editor.apply()
@@ -283,39 +302,70 @@ object StatisticsManager {
     
     private fun updateUserStats(session: FocusSessionRecord) {
         val sessionDuration = if (session.endTime != null) {
-            ChronoUnit.MINUTES.between(session.startTime, session.endTime)
+            ChronoUnit.MINUTES.between(session.startTime, session.endTime).coerceAtLeast(0L)
         } else 0L
         
         val editor = prefs.edit()
         
-        // Update total hours
-        val currentHours = prefs.getLong("total_focus_hours", 0L)
-        editor.putLong("total_focus_hours", currentHours + (sessionDuration / 60))
+        // Update total hours with validation
+        val currentMinutes = prefs.getLong("total_focus_hours", 0L) * 60
+        val newTotalMinutes = currentMinutes + sessionDuration
+        val newTotalHours = (newTotalMinutes / 60).coerceAtMost(100000L) // Reasonable max
+        editor.putLong("total_focus_hours", newTotalHours)
         
-        // Update total sessions
-        val totalSessions = prefs.getInt("total_sessions", 0)
-        editor.putInt("total_sessions", totalSessions + 1)
+        // Update total sessions with validation
+        val totalSessions = prefs.getInt("total_sessions", 0).coerceAtLeast(0)
+        val newTotalSessions = (totalSessions + 1).coerceAtMost(50000) // Reasonable max
+        editor.putInt("total_sessions", newTotalSessions)
         
-        // Update XP
+        // Update XP with improved calculation
         val xpGained = calculateXPGained(session, sessionDuration)
-        val currentXP = prefs.getInt("experience_points", 0)
-        editor.putInt("experience_points", currentXP + xpGained)
+        val currentXP = prefs.getInt("experience_points", 0).coerceAtLeast(0)
+        val newXP = (currentXP + xpGained).coerceAtMost(1000000) // Reasonable max
+        editor.putInt("experience_points", newXP)
         
-        // Update streaks
-        updateStreaks(session.isCompleted)
+        // Update streaks only for completed sessions
+        if (session.isCompleted) {
+            updateStreaks(true)
+        }
         
         editor.apply()
         loadUserStats()
     }
     
     private fun calculateXPGained(session: FocusSessionRecord, duration: Long): Int {
-        var xp = (duration / 5).toInt() // 1 XP per 5 minutes
+        if (duration <= 0) return 0
         
-        if (session.isCompleted) xp = (xp * 1.5).toInt()
-        if (session.distractionCount == 0) xp = (xp * 1.2).toInt()
-        if (duration >= 60) xp += 50 // Bonus for hour+ sessions
+        // Base XP: 1 XP per minute, capped at reasonable amount
+        var xp = duration.toInt().coerceAtMost(480) // Max 8 hours worth of base XP
         
-        return xp
+        // Completion bonus: significant reward for finishing sessions
+        if (session.isCompleted) {
+            xp = (xp * 1.5).toInt()
+        }
+        
+        // Focus quality bonus: reward for maintaining focus (low distractions)
+        when (session.distractionCount) {
+            0 -> xp = (xp * 1.3).toInt() // 30% bonus for perfect focus
+            1 -> xp = (xp * 1.15).toInt() // 15% bonus for excellent focus
+            2 -> xp = (xp * 1.05).toInt() // 5% bonus for good focus
+            // No bonus for 3+ distractions
+        }
+        
+        // Duration milestone bonuses
+        when {
+            duration >= 240 -> xp += 100 // 4+ hour milestone
+            duration >= 120 -> xp += 50  // 2+ hour milestone
+            duration >= 60 -> xp += 25   // 1+ hour milestone
+            duration >= 30 -> xp += 10   // 30+ minute milestone
+        }
+        
+        // Session type modifier
+        if (session.type == "STUDY_TIME") {
+            xp = (xp * 1.1).toInt() // Slight bonus for study sessions
+        }
+        
+        return xp.coerceIn(1, 1000) // Ensure reasonable XP range
     }
     
     private fun calculateLevel(xp: Int): Int {
@@ -366,9 +416,38 @@ object StatisticsManager {
     }
     
     private fun getTopBlockedApps(date: LocalDate): List<String> {
-        // This would typically query a database of blocked app interactions
-        // For now, return some sample data
-        return listOf("com.instagram.android", "com.twitter.android", "com.tiktok")
+        // Get blocked apps from actual sessions for this date
+        val dateKey = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val sessionsJson = prefs.getString("sessions_${dateKey}", null)
+        
+        if (sessionsJson.isNullOrEmpty()) {
+            return emptyList()
+        }
+        
+        try {
+            val jsonArray = org.json.JSONArray(sessionsJson)
+            val blockedApps = mutableMapOf<String, Int>()
+            
+            for (i in 0 until jsonArray.length()) {
+                val session = jsonArray.optJSONObject(i)
+                session?.optJSONArray("blockedApps")?.let { apps ->
+                    for (j in 0 until apps.length()) {
+                        val app = apps.optString(j)
+                        if (app.isNotEmpty()) {
+                            blockedApps[app] = blockedApps.getOrDefault(app, 0) + 1
+                        }
+                    }
+                }
+            }
+            
+            return blockedApps.toList()
+                .sortedByDescending { it.second }
+                .take(5)
+                .map { it.first }
+        } catch (e: Exception) {
+            Log.e("StatisticsManager", "Error parsing blocked apps data", e)
+            return emptyList()
+        }
     }
     
     private fun findBestDay(dailyStats: List<DailyStats>): LocalDate? {
@@ -394,7 +473,7 @@ object StatisticsManager {
     }
     
     private fun saveSessionRecord(session: FocusSessionRecord) {
-        // Persist basic info so UsageStatsHelper can compute screen time during focus sessions
+        // Persist session info including blocked apps for analytics
         val dateKey = session.startTime.toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val prefsKey = "sessions_${dateKey}"
         val existing = prefs.getString(prefsKey, null)
@@ -403,12 +482,24 @@ object StatisticsManager {
         // Only store if session has valid end time
         if (session.endTime != null) {
             val obj = org.json.JSONObject()
+            obj.put("id", session.id)
             obj.put("start", session.startTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
             obj.put("end", session.endTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli())
+            obj.put("type", session.type)
+            obj.put("isCompleted", session.isCompleted)
+            obj.put("distractionCount", session.distractionCount)
+            
+            // Store blocked apps array
+            val blockedAppsArray = org.json.JSONArray()
+            session.blockedApps.forEach { app ->
+                blockedAppsArray.put(app)
+            }
+            obj.put("blockedApps", blockedAppsArray)
+            
             jsonArray.put(obj)
             prefs.edit().putString(prefsKey, jsonArray.toString()).apply()
         }
-        Log.d("StatisticsManager", "Saved session record: ${session.id}")
+        Log.d("StatisticsManager", "Saved session record with ${session.blockedApps.size} blocked apps: ${session.id}")
     }
     
     private fun clearCurrentSession() {

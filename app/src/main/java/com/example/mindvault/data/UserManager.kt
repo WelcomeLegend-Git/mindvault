@@ -359,14 +359,4 @@ object UserManager {
     private fun generateSessionToken(): String {
         return "session_${System.currentTimeMillis()}_${(10000..99999).random()}"
     }
-    
-    // Demo data creation for testing
-    fun createDemoUsers() {
-        if (getAllUsers().isEmpty()) {
-            createUser("John Doe", "john@example.com", UserRole.ADMIN)
-            createUser("Jane Smith", "jane@example.com", UserRole.PREMIUM)
-            createUser("Bob Wilson", "bob@example.com", UserRole.STANDARD)
-            Log.d("UserManager", "Created demo users")
-        }
-    }
 }
