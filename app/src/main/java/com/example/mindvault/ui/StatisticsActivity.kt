@@ -411,32 +411,55 @@ fun QuickStatItem(
 fun TodayScreenTimeCard() {
     val context = LocalContext.current
 
+    // Check if usage stats permission is granted
+    val hasUsagePermission = remember { 
+        com.example.mindvault.utils.PermissionManager.hasUsageStatsPermission(context) 
+    }
+
     // Load usage stats asynchronously to avoid blocking UI
     val totalUsage by produceState(initialValue = emptyList<Pair<String, Int>>(/*name, minutes*/)) {
         value = withContext(Dispatchers.IO) {
-            UsageStatsHelper.getTodayUsageStats(context)
-                .mapValues { (_, v) -> (v / 60000L).toInt() }
-                .toList()
-                .filter { it.second > 0 }
-                .sortedByDescending { it.second }
-                .take(5)
-                .map { AppManager.getAppName(context, it.first) to it.second }
+            if (!hasUsagePermission) {
+                emptyList()
+            } else {
+                try {
+                    UsageStatsHelper.getTodayUsageStats(context)
+                        .mapValues { (_, v) -> (v / 60000L).toInt() }
+                        .toList()
+                        .filter { it.second > 0 }
+                        .sortedByDescending { it.second }
+                        .take(5)
+                        .map { AppManager.getAppName(context, it.first) to it.second }
+                } catch (e: Exception) {
+                    android.util.Log.e("StatisticsActivity", "Error loading usage stats", e)
+                    emptyList()
+                }
+            }
         }
     }
 
     val focusUsage by produceState(initialValue = emptyList<Pair<String, Int>>()) {
         value = withContext(Dispatchers.IO) {
-            val focusData = UsageStatsHelper.getUsageDuringFocus(context)
-            android.util.Log.d("FocusDebug", "Focus sessions data: ${focusData.size} apps")
-            
-            // Process the actual focus data
-            focusData
-                .mapValues { (_, v) -> (v / 60000L).toInt() } // Convert to minutes
-                .toList()
-                .filter { it.second > 0 } // Only include apps with actual usage
-                .sortedByDescending { it.second }
-                .take(5)
-                .map { AppManager.getAppName(context, it.first) to it.second }
+            if (!hasUsagePermission) {
+                emptyList()
+            } else {
+                try {
+                    val focusData = UsageStatsHelper.getUsageDuringFocus(context)
+                    android.util.Log.d("FocusDebug", "Focus sessions data: ${focusData.size} apps")
+                    
+                    // Process the actual focus data
+                    focusData
+                        .mapValues { (_, v) -> (v / 60000L).toInt() } // Convert to minutes
+                        .toList()
+                        .filter { it.second > 0 } // Only include apps with actual usage
+                        .sortedByDescending { it.second }
+                        .take(5)
+                        .map { AppManager.getAppName(context, it.first) to it.second }
+                } catch (e: Exception) {
+                    android.util.Log.e("StatisticsActivity", "Error loading focus usage stats", e)
+                    emptyList()
+                }
+            }
         }
     }
 
@@ -460,36 +483,54 @@ fun TodayScreenTimeCard() {
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Focus Mode Section
-            if (focusUsage.isEmpty()) {
-                AppUsagePieSection(
-                    title = "During Focus Mode",
-                    usageList = emptyList(),
-                    totalMinutes = 0
-                )
+            if (!hasUsagePermission) {
+                // Show permission required message
+                Column {
+                    Text(
+                        text = "Usage Access Permission Required",
+                        color = Color(0xFFFFB74D),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "To see app usage during focus sessions, please grant Usage Access permission in Settings.",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                }
             } else {
-                AppUsagePieSection(
-                    title = "During Focus Mode",
-                    usageList = focusUsage,
-                    totalMinutes = totalFocusMinutes
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // All Apps Section
-            if (totalUsage.isEmpty()) {
-                AppUsagePieSection(
-                    title = "Today (All Apps)",
-                    usageList = emptyList(),
-                    totalMinutes = 0
-                )
-            } else {
-                AppUsagePieSection(
-                    title = "Today (All Apps)",
-                    usageList = totalUsage,
-                    totalMinutes = totalAllMinutes
-                )
+                // Focus Mode Section
+                if (focusUsage.isEmpty()) {
+                    AppUsagePieSection(
+                        title = "During Focus Mode",
+                        usageList = emptyList(),
+                        totalMinutes = 0
+                    )
+                } else {
+                    AppUsagePieSection(
+                        title = "During Focus Mode",
+                        usageList = focusUsage,
+                        totalMinutes = totalFocusMinutes
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                // All Apps Section
+                if (totalUsage.isEmpty()) {
+                    AppUsagePieSection(
+                        title = "Today (All Apps)",
+                        usageList = emptyList(),
+                        totalMinutes = 0
+                    )
+                } else {
+                    AppUsagePieSection(
+                        title = "Today (All Apps)",
+                        usageList = totalUsage,
+                        totalMinutes = totalAllMinutes
+                    )
+                }
             }
         }
     }
