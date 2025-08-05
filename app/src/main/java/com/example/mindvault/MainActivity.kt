@@ -289,18 +289,11 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                     modifier = Modifier
                         .graphicsLayer(
                             scaleX = 2.2f,
-                            scaleY = 2.2f
+                            scaleY = 2.2f,
+                            alpha = if (isToggleEnabled) 1f else 0.4f
                         )
                 )
-                if (!isToggleEnabled) {
-                    Text(
-                        text = "Cannot turn off during active Focus Mode",
-                        fontSize = 14.sp,
-                        color = Color(0xFFFFA500),
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.align(Alignment.BottomCenter)
-                    )
-                }
+                // Removed the yellow statement
             }
             // --- END REPLACEMENT ---
         }
