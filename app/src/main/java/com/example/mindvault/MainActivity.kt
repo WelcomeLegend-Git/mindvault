@@ -239,6 +239,8 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
 
             // --- REPLACE ClockView WITH TOGGLE ---
+            // Remove the label and double the size of the toggle
+            Spacer(modifier = Modifier.height(24.dp))
             val activeSlot by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
             val focusModeEnabled by remember { mutableStateOf(FocusManager.getFocusModeEnabled()) }
             var switchState by remember { mutableStateOf(focusModeEnabled) }
@@ -250,13 +252,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Focus Mode Master Switch",
-                    fontSize = 32.sp, // Match the visual size of the time
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+                // Removed label
                 Switch(
                     checked = switchState,
                     onCheckedChange = {
@@ -272,7 +268,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
                         uncheckedThumbColor = Color.Gray,
                         uncheckedTrackColor = Color.DarkGray
                     ),
-                    modifier = Modifier.size(width = 120.dp, height = 64.dp) // Match the total size of time & date
+                    modifier = Modifier.size(width = 240.dp, height = 128.dp) // Double the previous size
                 )
                 if (!isToggleEnabled) {
                     Text(
