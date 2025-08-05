@@ -10,6 +10,9 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.roundToInt
+import com.example.mindvault.MindVaultApplication
+import kotlinx.coroutines.launch
+import com.example.mindvault.data.AuthManager
 
 data class FocusSessionRecord(
     val id: String,
@@ -111,6 +114,9 @@ object StatisticsManager {
         updateUserStats(endedSession)
         clearCurrentSession()
         Log.d("StatisticsManager", "Ended focus session: ${session.type}, completed: $completed")
+        MindVaultApplication.instance.applicationScope.launch {
+            AuthManager.syncUserDataToCloud()
+        }
     }
     
     fun recordDistraction(appPackage: String) {
@@ -298,6 +304,9 @@ object StatisticsManager {
         
         editor.apply()
         loadDailyStats()
+        MindVaultApplication.instance.applicationScope.launch {
+            AuthManager.syncUserDataToCloud()
+        }
     }
     
     private fun updateUserStats(session: FocusSessionRecord) {
@@ -331,6 +340,9 @@ object StatisticsManager {
         
         editor.apply()
         loadUserStats()
+        MindVaultApplication.instance.applicationScope.launch {
+            AuthManager.syncUserDataToCloud()
+        }
     }
     
     private fun calculateXPGained(session: FocusSessionRecord, duration: Long): Int {
@@ -412,6 +424,9 @@ object StatisticsManager {
         
         if (currentStreak > longestStreak) {
             prefs.edit().putInt("longest_streak", currentStreak).apply()
+            MindVaultApplication.instance.applicationScope.launch {
+                AuthManager.syncUserDataToCloud()
+            }
         }
     }
     
@@ -460,6 +475,14 @@ object StatisticsManager {
             emptyList()
         } else {
             achievementsString.split(",")
+        }
+    }
+
+    // After achievements are updated, sync as well
+    private fun saveAchievements(achievements: List<String>) {
+        prefs.edit().putString("achievements", achievements.joinToString(",")).apply()
+        MindVaultApplication.instance.applicationScope.launch {
+            AuthManager.syncUserDataToCloud()
         }
     }
     
