@@ -252,24 +252,28 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
             }
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                // Removed label
-                Switch(
-                    checked = switchState,
-                    onCheckedChange = {
-                        if (isToggleEnabled || it) { // Only allow ON if in active slot
-                            switchState = it
-                            FocusManager.setFocusModeEnabled(it)
-                        }
-                    },
-                    enabled = isToggleEnabled || switchState, // Can't turn off during focus mode
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF8F5CFF),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.DarkGray
-                    ),
-                    modifier = Modifier.size(width = 240.dp, height = 128.dp) // Double the previous size
-                )
+                Box(
+                    modifier = Modifier.size(width = 320.dp, height = 180.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Switch(
+                        checked = switchState,
+                        onCheckedChange = {
+                            if (isToggleEnabled || it) {
+                                switchState = it
+                                FocusManager.setFocusModeEnabled(it)
+                            }
+                        },
+                        enabled = isToggleEnabled || switchState,
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFF8F5CFF),
+                            uncheckedThumbColor = Color.Gray,
+                            uncheckedTrackColor = Color.DarkGray
+                        ),
+                        modifier = Modifier.size(width = 180.dp, height = 120.dp)
+                    )
+                }
                 if (!isToggleEnabled) {
                     Text(
                         text = "Cannot turn off during active Focus Mode",
