@@ -173,11 +173,7 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // HomeHeader fills more space when permissions are contracted
-            val headerWeight = if (expandedState.value) 0.5f else 0.8f
-            Box(modifier = Modifier.weight(headerWeight, fill = true)) {
-                HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
-            }
+            HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
             StatusCard()
             Spacer(modifier = Modifier.height(24.dp))
             PermissionStatusCard(expandedState)
@@ -272,7 +268,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
 
             Box(
                 modifier = Modifier
-                    .size(width = 320.dp, height = 180.dp),
+                    .size(width = 220.dp, height = 110.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Switch(
@@ -292,8 +288,8 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                     ),
                     modifier = Modifier
                         .graphicsLayer(
-                            scaleX = 3.5f,
-                            scaleY = 3.5f
+                            scaleX = 2.2f,
+                            scaleY = 2.2f
                         )
                 )
                 if (!isToggleEnabled) {
