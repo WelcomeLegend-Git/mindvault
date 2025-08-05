@@ -73,6 +73,7 @@ import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.graphics.graphicsLayer
 
 class MainActivity : ComponentActivity() {
 
@@ -269,33 +270,32 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                 switchState = FocusManager.getFocusModeEnabled()
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.size(width = 320.dp, height = 180.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Switch(
-                        checked = switchState,
-                        onCheckedChange = {
-                            if (isToggleEnabled || it) {
-                                switchState = it
-                                FocusManager.setFocusModeEnabled(it)
-                            }
-                        },
-                        enabled = isToggleEnabled || switchState,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFF8F5CFF),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        ),
-                        modifier = Modifier
-                            .graphicsLayer(
-                                scaleX = 3.5f,
-                                scaleY = 3.5f
-                            )
-                    )
-                }
+            Box(
+                modifier = Modifier
+                    .size(width = 320.dp, height = 180.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Switch(
+                    checked = switchState,
+                    onCheckedChange = {
+                        if (isToggleEnabled || it) {
+                            switchState = it
+                            FocusManager.setFocusModeEnabled(it)
+                        }
+                    },
+                    enabled = isToggleEnabled || switchState,
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFF8F5CFF),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.DarkGray
+                    ),
+                    modifier = Modifier
+                        .graphicsLayer(
+                            scaleX = 3.5f,
+                            scaleY = 3.5f
+                        )
+                )
                 if (!isToggleEnabled) {
                     Text(
                         text = "Cannot turn off during active Focus Mode",
