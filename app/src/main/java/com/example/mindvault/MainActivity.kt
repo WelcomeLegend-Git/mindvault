@@ -143,6 +143,20 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(onLaunchLogin: () -> Unit) {
+    val permissionCardExpanded = remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val user by UserManager.currentUser.collectAsStateWithLifecycle()
+    val isLoggedIn by UserManager.isLoggedIn.collectAsStateWithLifecycle()
+    val allPermissionsGranted = remember {
+        derivedStateOf {
+            PermissionManager.hasUsageStatsPermission(context) &&
+            PermissionManager.hasOverlayPermission(context) &&
+            AppManager.hasNotificationListenerPermission(context) &&
+            PermissionManager.isAccessibilityServiceEnabled(context)
+        }
+    }
+    // Listen to PermissionStatusCard expansion state
+    val expandedState = remember { mutableStateOf(true) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -158,10 +172,14 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HomeHeader(onLaunchLogin = onLaunchLogin)
+            // HomeHeader fills more space when permissions are contracted
+            val headerWeight = if (expandedState.value) 0.5f else 0.8f
+            Box(modifier = Modifier.weight(headerWeight, fill = true)) {
+                HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
+            }
             StatusCard()
             Spacer(modifier = Modifier.height(24.dp))
-            PermissionStatusCard()
+            PermissionStatusCard(expandedState)
             Spacer(modifier = Modifier.height(24.dp))
             FeatureCardsGrid(onLaunchLogin = onLaunchLogin)
             Spacer(modifier = Modifier.height(16.dp))
@@ -170,7 +188,7 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
 }
 
 @Composable
-fun HomeHeader(onLaunchLogin: () -> Unit) {
+fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -217,7 +235,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
         // MindVault content moved down
         Column(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(top = 30.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -271,7 +289,11 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
                             uncheckedThumbColor = Color.Gray,
                             uncheckedTrackColor = Color.DarkGray
                         ),
-                        modifier = Modifier.size(width = 180.dp, height = 120.dp)
+                        modifier = Modifier
+                            .graphicsLayer(
+                                scaleX = 3.5f,
+                                scaleY = 3.5f
+                            )
                     )
                 }
                 if (!isToggleEnabled) {
@@ -279,7 +301,8 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
                         text = "Cannot turn off during active Focus Mode",
                         fontSize = 14.sp,
                         color = Color(0xFFFFA500),
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.align(Alignment.BottomCenter)
                     )
                 }
             }
@@ -418,7 +441,7 @@ fun StatusCard() {
 }
 
 @Composable
-fun PermissionStatusCard() {
+fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     val context = LocalContext.current
     var hasUsageStats by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
     var hasOverlay by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
@@ -450,8 +473,6 @@ fun PermissionStatusCard() {
     }
 
     val allPermissionsGranted = hasUsageStats && hasOverlay && hasNotification && hasAccessibility
-    val expanded = remember { mutableStateOf(true) }
-    val expandedState = remember { mutableStateOf(true) }
     
     // Auto-collapse when all permissions are granted
     LaunchedEffect(allPermissionsGranted) {
