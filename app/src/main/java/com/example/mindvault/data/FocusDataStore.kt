@@ -15,6 +15,7 @@ import com.example.mindvault.model.FocusConfiguration
 object FocusDataStore {
     private const val PREFS_NAME = "FocusModePrefs"
     private const val CONFIG_KEY = "FocusConfiguration"
+    private const val FOCUS_MODE_ENABLED_KEY = "FocusModeEnabled"
 
     private val gson: Gson by lazy {
         GsonBuilder()
@@ -51,6 +52,16 @@ object FocusDataStore {
             Log.d("FocusDataStore", "No configuration found, returning default.")
             FocusConfiguration() // Return default if no config saved
         }
+    }
+
+    fun setFocusModeEnabled(context: Context, enabled: Boolean) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putBoolean(FOCUS_MODE_ENABLED_KEY, enabled).apply()
+    }
+
+    fun getFocusModeEnabled(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getBoolean(FOCUS_MODE_ENABLED_KEY, true)
     }
 }
 

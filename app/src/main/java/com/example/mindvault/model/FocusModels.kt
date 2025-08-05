@@ -24,5 +24,6 @@ data class TimeSlot(
 
 data class FocusConfiguration(
     val timeSlots: List<TimeSlot> = emptyList(),
-    val selectedApps: List<String> = emptyList()
+    val selectedApps: List<String> = emptyList(),
+    val focusModeEnabled: Boolean = true
 )

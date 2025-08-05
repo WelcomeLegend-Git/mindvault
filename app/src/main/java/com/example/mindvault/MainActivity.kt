@@ -238,37 +238,53 @@ fun HomeHeader(onLaunchLogin: () -> Unit) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            ClockView()
+            // --- REPLACE ClockView WITH TOGGLE ---
+            val activeSlot by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
+            val focusModeEnabled by remember { mutableStateOf(FocusManager.getFocusModeEnabled()) }
+            var switchState by remember { mutableStateOf(focusModeEnabled) }
+            val isToggleEnabled = activeSlot == null
+
+            // Sync state with FocusManager changes
+            LaunchedEffect(activeSlot) {
+                switchState = FocusManager.getFocusModeEnabled()
+            }
+
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Focus Mode Master Switch",
+                    fontSize = 32.sp, // Match the visual size of the time
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Switch(
+                    checked = switchState,
+                    onCheckedChange = {
+                        if (isToggleEnabled || it) { // Only allow ON if in active slot
+                            switchState = it
+                            FocusManager.setFocusModeEnabled(it)
+                        }
+                    },
+                    enabled = isToggleEnabled || switchState, // Can't turn off during focus mode
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = Color(0xFF8F5CFF),
+                        uncheckedThumbColor = Color.Gray,
+                        uncheckedTrackColor = Color.DarkGray
+                    ),
+                    modifier = Modifier.size(width = 120.dp, height = 64.dp) // Match the total size of time & date
+                )
+                if (!isToggleEnabled) {
+                    Text(
+                        text = "Cannot turn off during active Focus Mode",
+                        fontSize = 14.sp,
+                        color = Color(0xFFFFA500),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            // --- END REPLACEMENT ---
         }
-    }
-}
-
-@Composable
-fun ClockView() {
-    var currentTime by remember { mutableStateOf(LocalDateTime.now()) }
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            currentTime = LocalDateTime.now()
-            delay(1000)
-        }
-    }
-
-    val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
-    val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d")
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            text = currentTime.format(timeFormatter),
-            fontSize = 64.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = currentTime.format(dateFormatter),
-            fontSize = 16.sp,
-            color = Color.White.copy(alpha = 0.7f)
-        )
     }
 }
 

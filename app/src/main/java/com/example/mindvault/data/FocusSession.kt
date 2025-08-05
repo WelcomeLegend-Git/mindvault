@@ -30,10 +30,14 @@ object FocusManager {
     private val _configurationFlow = MutableStateFlow(FocusConfiguration())
     val configurationFlow = _configurationFlow.asStateFlow()
 
+    private var focusModeEnabled: Boolean = true
+
     fun init(context: Context) {
         Log.d("FocusManager", "Initializing FocusManager")
         appContext = context.applicationContext
         currentConfiguration = FocusDataStore.getConfiguration(appContext)
+        focusModeEnabled = FocusDataStore.getFocusModeEnabled(appContext)
+        currentConfiguration = currentConfiguration.copy(focusModeEnabled = focusModeEnabled)
         _configurationFlow.value = currentConfiguration
         
         // Initialize StatisticsManager
@@ -138,7 +142,7 @@ object FocusManager {
             Log.e("FocusManager", "FocusManager not initialized! Cannot check if focus mode is active")
             return false
         }
-        return getCurrentActiveSlot() != null
+        return getCurrentActiveSlot() != null && currentConfiguration.focusModeEnabled
     }
     
     private fun startMonitoring() {
@@ -156,8 +160,8 @@ object FocusManager {
             isTimeInRange(currentTime, it.startTime, it.endTime)
         }
         
-        // Only consider slot "active" if all permissions are granted
-        val activeSlot = if (areAllPermissionsGranted()) potentialActiveSlot else null
+        // Only consider slot "active" if all permissions are granted AND focusModeEnabled is true
+        val activeSlot = if (areAllPermissionsGranted() && currentConfiguration.focusModeEnabled) potentialActiveSlot else null
 
         if (_activeSlotFlow.value?.id != activeSlot?.id) {
             // End previous session if there was one
@@ -229,5 +233,18 @@ object FocusManager {
                 "No upcoming sessions"
             }
         }
+    }
+
+    fun setFocusModeEnabled(enabled: Boolean) {
+        if (!::appContext.isInitialized) return
+        focusModeEnabled = enabled
+        FocusDataStore.setFocusModeEnabled(appContext, enabled)
+        currentConfiguration = currentConfiguration.copy(focusModeEnabled = enabled)
+        _configurationFlow.value = currentConfiguration
+        checkAndUpdateActiveSlot()
+    }
+
+    fun getFocusModeEnabled(): Boolean {
+        return focusModeEnabled
     }
 }
