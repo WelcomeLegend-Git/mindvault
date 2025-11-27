@@ -156,7 +156,7 @@ object StatisticsManager {
         val productivityScore = if (totalSessions > 0) {
             prefs.getFloat("daily_productivity_${dateKey}", 0f).coerceIn(0f, 100f)
         } else {
-            100f // Default score when no sessions exist
+            0f
         }
         
         _dailyStats.value = DailyStats(
@@ -191,7 +191,7 @@ object StatisticsManager {
                 completedSessions = prefs.getInt("daily_completed_${dateKey}", 0),
                 totalSessions = prefs.getInt("daily_total_${dateKey}", 0),
                 distractionCount = prefs.getInt("daily_distractions_${dateKey}", 0),
-                productivityScore = prefs.getFloat("daily_productivity_${dateKey}", 100f),
+                productivityScore = prefs.getFloat("daily_productivity_${dateKey}", 0f).coerceIn(0f, 100f),
                 topBlockedApps = getTopBlockedApps(date)
             )
             dailyStatsList.add(dayStats)
@@ -206,7 +206,7 @@ object StatisticsManager {
             weekStart = weekStart,
             dailyStats = dailyStatsList,
             totalFocusTime = totalWeeklyFocus,
-            averageDailyFocus = totalWeeklyFocus / 7,
+            averageDailyFocus = totalWeeklyFocus / (today.dayOfWeek.value).coerceAtLeast(1),
             bestDay = findBestDay(dailyStatsList),
             longestStreak = longestStreak,
             currentStreak = currentStreak,
@@ -287,7 +287,8 @@ object StatisticsManager {
         // Update distractions with validation
         val currentDistractions = prefs.getInt("daily_distractions_${dateKey}", 0)
         val validatedDistractions = session.distractionCount.coerceAtLeast(0)
-        editor.putInt("daily_distractions_${dateKey}", currentDistractions + validatedDistractions)
+        val newDistractionTotal = currentDistractions + validatedDistractions
+        editor.putInt("daily_distractions_${dateKey}", newDistractionTotal)
         
         // Calculate realistic productivity score
         val completedCount = prefs.getInt("daily_completed_${dateKey}", 0) + if (session.isCompleted) 1 else 0
@@ -296,8 +297,8 @@ object StatisticsManager {
         
         // More realistic productivity calculation
         val baseScore = completionRate * 70f // Completion contributes 70% max
-        val focusBonus = minOf(30f, (sessionDuration / 60f) * 5f) // Focus time contributes up to 30%
-        val distractionPenalty = minOf(40f, validatedDistractions * 8f) // Distraction penalty up to 40%
+        val focusBonus = minOf(30f, (newFocusTotal / 60f) * 5f) // Focus time contributes up to 30% (based on daily total)
+        val distractionPenalty = minOf(40f, newDistractionTotal * 8f) // Distraction penalty up to 40%
         
         val productivityScore = (baseScore + focusBonus - distractionPenalty).coerceIn(0f, 100f)
         editor.putFloat("daily_productivity_${dateKey}", productivityScore)
@@ -401,11 +402,24 @@ object StatisticsManager {
         var streak = 0
         var date = LocalDate.now()
         
+        // Check today first
+        if (hadFocusOn(date)) {
+            streak++
+            date = date.minusDays(1)
+        } else {
+            // If today is not done, check yesterday.
+            // If yesterday is done, streak continues from yesterday.
+            // If yesterday is NOT done, streak is broken (0).
+            if (hadFocusOn(date.minusDays(1))) {
+                date = date.minusDays(1)
+            } else {
+                return 0 // Streak broken
+            }
+        }
+        
+        // Count backwards
         while (true) {
-            val dateKey = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            val dailyFocus = prefs.getLong("daily_focus_${dateKey}", 0L)
-            
-            if (dailyFocus >= 30) { // At least 30 minutes to count as a streak day
+            if (hadFocusOn(date)) {
                 streak++
                 date = date.minusDays(1)
             } else {
@@ -481,8 +495,18 @@ object StatisticsManager {
     // After achievements are updated, sync as well
     private fun saveAchievements(achievements: List<String>) {
         prefs.edit().putString("achievements", achievements.joinToString(",")).apply()
+        // Trigger background sync but also enqueue a WorkManager retry in case we are offline
         MindVaultApplication.instance.applicationScope.launch {
-            AuthManager.syncUserDataToCloud()
+            val success = AuthManager.syncUserDataToCloud()
+            if (!success) {
+                try {
+                    val wm = androidx.work.WorkManager.getInstance(MindVaultApplication.instance)
+                    val req = androidx.work.OneTimeWorkRequestBuilder<com.example.mindvault.data.BackupSyncWorker>()
+                        .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                        .build()
+                    wm.enqueue(req)
+                } catch (_: Exception) { }
+            }
         }
     }
     
@@ -543,7 +567,7 @@ object StatisticsManager {
     }
     
     fun getProductivityScore(): Float {
-        return _dailyStats.value?.productivityScore ?: 100f
+        return _dailyStats.value?.productivityScore ?: 0f
     }
 
     /**
@@ -552,7 +576,8 @@ object StatisticsManager {
      */
     fun hadFocusOn(date: java.time.LocalDate): Boolean {
         val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-        val minutes = prefs.getLong("daily_focus_${'$'}{dateKey}", 0L)
+        // Correct preference key interpolation
+        val minutes = prefs.getLong("daily_focus_${dateKey}", 0L)
         return minutes >= 30L
     }
 }

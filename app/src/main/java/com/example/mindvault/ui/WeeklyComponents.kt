@@ -157,7 +157,7 @@ fun WeeklyBarChartSection(weeklyStats: WeeklyStats?) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp),
+                    .height(160.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
@@ -167,7 +167,8 @@ fun WeeklyBarChartSection(weeklyStats: WeeklyStats?) {
                         Box(
                             modifier = Modifier
                                 .width(24.dp)
-                                .fillMaxHeight(barHeightRatio)
+                                // Reserve bottom space for label: bars scale within 120dp
+                                .height((120.dp * barHeightRatio).coerceAtLeast(4.dp))
                                 .shadow(
                                     elevation = 6.dp,
                                     shape = RoundedCornerShape(6.dp),
@@ -184,9 +185,10 @@ fun WeeklyBarChartSection(weeklyStats: WeeklyStats?) {
                                     shape = RoundedCornerShape(6.dp)
                                 )
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
+                        // Use two-letter labels to avoid both Tuesday/Thursday mapping to the same "T"
                         Text(
-                            text = dayStats.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(1),
+                            text = dayStats.date.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 12.sp
                         )

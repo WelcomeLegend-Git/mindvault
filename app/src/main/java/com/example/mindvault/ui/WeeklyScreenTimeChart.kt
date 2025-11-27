@@ -106,7 +106,8 @@ fun WeeklyScreenTimeChart() {
                     ) {
                         dailyUsageMinutes.value.forEach { (day, minutes) ->
                             val ratio = if (minutes > 0) (minutes / max.toFloat()).coerceAtLeast(0.05f) else 0f
-                            val dayName = day.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(1)
+                            // Use two-letter labels to prevent both Tuesday and Thursday from showing the same initial
+                            val dayName = day.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2)
                             
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -123,10 +124,11 @@ fun WeeklyScreenTimeChart() {
                                     }
                                     .padding(4.dp)
                             ) {
-                                Box(
+                Box(
                                     modifier = Modifier
-                                        .width(28.dp)
-                                        .height((120 * ratio).dp.coerceAtLeast(4.dp))
+                        .width(28.dp)
+                        // Cap bar height at 120dp so it won't overlap labels
+                        .height((120 * ratio).dp.coerceAtLeast(4.dp))
                                     .shadow(
                                         elevation = 8.dp,
                                         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
@@ -157,7 +159,7 @@ fun WeeklyScreenTimeChart() {
                                         shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
                                     )
                             )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(10.dp))
                                 Text(
                                     text = dayName,
                                     color = Color.White.copy(alpha = 0.8f),

@@ -61,6 +61,7 @@ fun ProductivityTrendsCard(weeklyStats: WeeklyStats?, userStats: UserStats?) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
+            // Values are in minutes. Display as hours+minutes correctly.
             val weeklyFocus = weeklyStats?.totalFocusTime ?: 0L
             val avgDaily = weeklyStats?.averageDailyFocus ?: 0L
             val currentLevel = userStats?.level ?: 1
@@ -69,8 +70,16 @@ fun ProductivityTrendsCard(weeklyStats: WeeklyStats?, userStats: UserStats?) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                MetricCard("Weekly Focus", "${weeklyFocus}h ${weeklyFocus % 60}m", Color(0xFF6C63FF))
-                MetricCard("Daily Average", "${avgDaily}h ${avgDaily % 60}m", Color(0xFFFF6B6B))
+                MetricCard(
+                    "Weekly Focus",
+                    "${weeklyFocus / 60}h ${weeklyFocus % 60}m",
+                    Color(0xFF6C63FF)
+                )
+                MetricCard(
+                    "Daily Average",
+                    "${avgDaily / 60}h ${avgDaily % 60}m",
+                    Color(0xFFFF6B6B)
+                )
                 MetricCard("Current Level", "$currentLevel", Color(0xFFFFD93D))
             }
         }
@@ -181,11 +190,28 @@ fun MonthlyProgressCard(userStats: UserStats?) {
             }
             
             Spacer(modifier = Modifier.height(16.dp))
-            
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val today = LocalDate.now()
+            val yearMonth = java.time.YearMonth.from(today)
+            val currentProgress = remember(context, yearMonth) {
+                val prefs = context.getSharedPreferences("mindvault_stats", android.content.Context.MODE_PRIVATE)
+                val daysInMonth = yearMonth.lengthOfMonth()
+                var total = 0L
+                for (day in 1..daysInMonth) {
+                    val date = yearMonth.atDay(day)
+                    val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                    total += prefs.getLong("daily_focus_${dateKey}", 0L)
+                }
+                total
+            }
             val monthlyGoal = userStats?.monthlyGoal ?: 5000L
-            val currentProgress = (userStats?.totalFocusHours ?: 0L) * 60 // Convert to minutes
-            val progressPercent = (currentProgress.toFloat() / monthlyGoal * 100).coerceAtMost(100f)
-            
+            val progressPercent = if (monthlyGoal > 0) {
+                (currentProgress.toFloat() / monthlyGoal.toFloat() * 100f).coerceAtMost(100f)
+            } else {
+                0f
+            }
+
             Column {
                 Text(
                     text = "${currentProgress}m / ${monthlyGoal}m",
@@ -439,14 +465,14 @@ private fun generateSmartInsights(dailyStats: DailyStats?, weeklyStats: WeeklySt
     val insights = mutableListOf<SmartInsight>()
     
     val dailyFocus = dailyStats?.totalFocusTime ?: 0L
-    val weeklyFocus = weeklyStats?.totalFocusTime ?: 0L
+    val weeklyAverage = weeklyStats?.averageDailyFocus ?: 0L
     
     if (dailyFocus > 60) {
         insights.add(SmartInsight("🔥", "Great Focus Today!", "You've focused for over an hour today"))
     }
     
-    if (weeklyFocus > 300) {
-        insights.add(SmartInsight("💪", "Strong Week", "You're averaging ${weeklyFocus/7}min daily focus"))
+    if (weeklyAverage > 45) {
+        insights.add(SmartInsight("💪", "Strong Week", "You're averaging ${weeklyAverage}min daily focus"))
     }
     
     val productivity = dailyStats?.productivityScore ?: 100f

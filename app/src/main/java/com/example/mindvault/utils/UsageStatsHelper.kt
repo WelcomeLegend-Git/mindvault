@@ -2,6 +2,7 @@ package com.example.mindvault.utils
 
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
+import android.app.usage.UsageEvents
 import android.content.Context
 import android.os.Build
 import android.util.Log
@@ -28,17 +29,49 @@ object UsageStatsHelper {
     ): Map<String, Long> {
         val usageManager =
             context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val stats: Map<String, UsageStats> = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            usageManager.queryAndAggregateUsageStats(startMillis, endMillis)
-        } else {
-            // Fallback for pre-Q devices – still aggregates explicitly
-            usageManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                startMillis,
-                endMillis
-            ).associateBy { it.packageName }
+        val usageEvents = usageManager.queryEvents(startMillis, endMillis)
+
+        val usageMap = mutableMapOf<String, Long>()
+        val foregroundStartMap = mutableMapOf<String, Long>()
+
+        val event = UsageEvents.Event()
+        while (usageEvents.hasNextEvent()) {
+            usageEvents.getNextEvent(event)
+            val packageName = event.packageName ?: continue
+
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND,
+                UsageEvents.Event.ACTIVITY_RESUMED -> {
+                    val clampedStart = maxOf(startMillis, event.timeStamp)
+                    foregroundStartMap[packageName] = clampedStart
+                }
+                UsageEvents.Event.MOVE_TO_BACKGROUND,
+                UsageEvents.Event.ACTIVITY_PAUSED -> {
+                    val start = foregroundStartMap.remove(packageName)
+                    if (start != null) {
+                        val clampedEnd = minOf(endMillis, event.timeStamp)
+                        if (clampedEnd > start) {
+                            val diff = clampedEnd - start
+                            val current = usageMap[packageName] ?: 0L
+                            usageMap[packageName] = current + diff
+                        }
+                    }
+                }
+            }
         }
-        return stats.mapValues { it.value.totalTimeInForeground }
+
+        // If an app is still considered foreground at the end of the range,
+        // count usage up to endMillis.
+        foregroundStartMap.forEach { (packageName, start) ->
+            val clampedEnd = endMillis
+            if (clampedEnd > start) {
+                val diff = clampedEnd - start
+                val current = usageMap[packageName] ?: 0L
+                usageMap[packageName] = current + diff
+            }
+        }
+
+        return usageMap
     }
 
     /**
@@ -50,7 +83,20 @@ object UsageStatsHelper {
             .atStartOfDay(ZoneId.systemDefault())
             .toInstant()
             .toEpochMilli()
-        return getUsageStatsForRange(context, startOfDay, now)
+            
+        val rawStats = getUsageStatsForRange(context, startOfDay, now)
+        
+        // Clamp total usage to elapsed time since midnight to prevent "future" usage
+        val elapsedSinceMidnight = now - startOfDay
+        val totalUsage = rawStats.values.sum()
+        
+        return if (totalUsage > elapsedSinceMidnight && elapsedSinceMidnight > 0) {
+            // If total usage exceeds elapsed time, scale down all values
+            val ratio = elapsedSinceMidnight.toDouble() / totalUsage.toDouble()
+            rawStats.mapValues { (_, time) -> (time * ratio).toLong() }
+        } else {
+            rawStats
+        }
     }
 
     /**
@@ -98,6 +144,26 @@ object UsageStatsHelper {
         
         Log.d("UsageStatsHelper", "Total apps with usage during focus: ${aggregate.filter { it.value > 0 }.size}")
         return aggregate
+    }
+
+    /**
+     * Exposes today's focus session windows for other components.
+     */
+    fun getTodayFocusWindowsPublic(context: Context): List<Pair<Long, Long>> {
+        return getTodayFocusSessions(context)
+    }
+
+    /**
+     * Returns the total duration (in minutes) of all focus sessions today.
+     * This is used to cap UI aggregates so totals cannot exceed the time actually spent in focus.
+     */
+    fun getTotalFocusMinutesToday(context: Context): Int {
+        val sessions = getTodayFocusSessions(context)
+        if (sessions.isEmpty()) return 0
+        val totalMs = sessions.sumOf { (start, end) ->
+            (end - start).coerceAtLeast(0L)
+        }
+        return (totalMs / 60000L).toInt()
     }
 
     /**

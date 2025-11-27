@@ -198,8 +198,8 @@ fun StatisticsScreen() {
                             item { TodayScreenTimeCard() }
                             
                             item { StreakCalendarCard(userStats) }
-                            
-                            
+                            item { LevelProgressCard(userStats) }
+                            item { ProductivityScoreCard(dailyStats) }
                         }
                         1 -> {
                             // Week Tab
@@ -219,7 +219,7 @@ fun StatisticsScreen() {
                             item { AllTimeStatsCard(userStats) }
                         }
                     }
-                    item { Spacer(modifier = Modifier.height(100.dp)) }
+                    item { Spacer(modifier = Modifier.height(24.dp)) }
                 }
             }
         }
@@ -463,7 +463,11 @@ fun TodayScreenTimeCard() {
         }
     }
 
-    val totalFocusMinutes = focusUsage.sumOf { it.second }
+    // Sum of app usage during focus sessions (minutes)
+    val totalFocusMinutesRaw = focusUsage.sumOf { it.second }
+    // Cap by the actual focus session duration to avoid impossible totals
+    val focusCapMinutes = remember { UsageStatsHelper.getTotalFocusMinutesToday(context) }
+    val totalFocusMinutes = totalFocusMinutesRaw.coerceAtMost(focusCapMinutes)
     val totalAllMinutes = totalUsage.sumOf { it.second }
 
     Card(
@@ -508,9 +512,16 @@ fun TodayScreenTimeCard() {
                         totalMinutes = 0
                     )
                 } else {
+                    // Normalize usage list so it does not exceed the cap
+                    val normalizedFocusList = if (totalFocusMinutesRaw <= 0 || totalFocusMinutesRaw <= totalFocusMinutes) {
+                        focusUsage
+                    } else {
+                        val ratio = if (totalFocusMinutesRaw > 0) totalFocusMinutes.toFloat() / totalFocusMinutesRaw.toFloat() else 0f
+                        focusUsage.map { (name, mins) -> name to kotlin.math.floor(mins * ratio).toInt() }
+                    }
                     AppUsagePieSection(
                         title = "During Focus Mode",
-                        usageList = focusUsage,
+                        usageList = normalizedFocusList,
                         totalMinutes = totalFocusMinutes
                     )
                 }
@@ -1014,78 +1025,259 @@ fun LifetimeStatsCard(userStats: com.example.mindvault.data.UserStats?) {
 
 @Composable
 fun LevelProgressCard(userStats: com.example.mindvault.data.UserStats?) {
-    // Implementation for level progress
+    val currentLevel = userStats?.level ?: 1
+    val currentXP = userStats?.experiencePoints ?: 0
+    val nextLevelXP = userStats?.nextLevelXP ?: 1000
+    val rank = userStats?.rank ?: "Beginner"
+    
+    // Calculate progress safely
+    val progress = if (nextLevelXP > 0) {
+        (currentXP.toFloat() / nextLevelXP.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White.copy(alpha = 0.05f)
-        )
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.padding(24.dp)
         ) {
-            Text(
-                text = "Level Progress - Coming Soon",
-                color = Color.White,
-                fontSize = 16.sp
-            )
+            // Header with Rank and Level
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "Current Rank",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = rank,
+                        color = Color(0xFFFFD700), // Gold color for rank
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                
+                Box(
+                    modifier = Modifier
+                        .background(
+                            brush = Brush.linearGradient(
+                                colors = listOf(Color(0xFF6C63FF), Color(0xFF5A54D9))
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        text = "Level $currentLevel",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            // XP Progress Bar
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "XP Progress",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "$currentXP / $nextLevelXP XP",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 14.sp
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(12.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color.White.copy(alpha = 0.1f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(
+                                        Color(0xFF00E676),
+                                        Color(0xFF00C853)
+                                    )
+                                )
+                            )
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = "${nextLevelXP - currentXP} XP to next level",
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    modifier = Modifier.align(Alignment.End)
+                )
+            }
         }
     }
 }
 
 @Composable
-fun AchievementsCard(userStats: com.example.mindvault.data.UserStats?) {
-    // Implementation for achievements
+fun ProductivityScoreCard(dailyStats: com.example.mindvault.data.DailyStats?) {
+    val score = dailyStats?.productivityScore ?: 0f
+    val completedSessions = dailyStats?.completedSessions ?: 0
+    val totalSessions = dailyStats?.totalSessions ?: 0
+    val distractions = dailyStats?.distractionCount ?: 0
+    val focusTime = dailyStats?.totalFocusTime ?: 0L
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = Color.White.copy(alpha = 0.05f)
-        )
+        ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.padding(24.dp)
         ) {
-            Text(
-                text = "Achievements - Coming Soon",
-                color = Color.White,
-                fontSize = 16.sp
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Speed,
+                    contentDescription = null,
+                    tint = Color(0xFF00E676),
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Productivity Score",
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Circular Score Indicator
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.size(100.dp)
+                ) {
+                    CircularProgressIndicator(
+                        progress = { score / 100f },
+                        modifier = Modifier.fillMaxSize(),
+                        color = when {
+                            score >= 80 -> Color(0xFF00E676)
+                            score >= 50 -> Color(0xFFFFD700)
+                            else -> Color(0xFFFF5252)
+                        },
+                        trackColor = Color.White.copy(alpha = 0.1f),
+                        strokeWidth = 8.dp,
+                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "${score.toInt()}",
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "/100",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(24.dp))
+
+                // Breakdown
+                Column(modifier = Modifier.weight(1f)) {
+                    ProductivityFactor(
+                        label = "Completion",
+                        value = if (totalSessions > 0) "${(completedSessions * 100 / totalSessions)}%" else "0%",
+                        isPositive = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProductivityFactor(
+                        label = "Focus Time",
+                        value = "${focusTime}m",
+                        isPositive = true
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    ProductivityFactor(
+                        label = "Distractions",
+                        value = "$distractions",
+                        isPositive = distractions == 0
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-fun RankingCard(userStats: com.example.mindvault.data.UserStats?) {
-    // Implementation for ranking
-    Card(
+private fun ProductivityFactor(label: String, value: String, isPositive: Boolean) {
+    Row(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
-        )
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
-        ) {
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.7f),
+            fontSize = 14.sp
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Ranking - Coming Soon",
+                text = value,
                 color = Color.White,
-                fontSize = 16.sp
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = if (isPositive) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                tint = if (isPositive) Color(0xFF00E676) else Color(0xFFFF5252),
+                modifier = Modifier.size(12.dp)
             )
         }
     }
 }
+
+// RankingCard merged into LevelProgressCard
 
 private fun generateInsights(dailyStats: com.example.mindvault.data.DailyStats?): List<String> {
     val insights = mutableListOf<String>()
