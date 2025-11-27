@@ -1,34 +1,15 @@
 package com.example.mindvault.utils
 
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
-import android.os.Process
 import android.provider.Settings
 import android.text.TextUtils
-import androidx.core.content.ContextCompat
 import com.example.mindvault.services.FocusAccessibilityService
 
 object PermissionManager {
 
-    fun hasUsageStatsPermission(context: Context): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-
     fun hasOverlayPermission(context: Context): Boolean {
         return Settings.canDrawOverlays(context)
-    }
-
-    fun requestUsageStatsPermission(context: Context) {
-        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
     }
 
     fun requestOverlayPermission(context: Context) {

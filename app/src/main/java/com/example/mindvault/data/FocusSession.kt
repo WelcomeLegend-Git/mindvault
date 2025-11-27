@@ -55,8 +55,7 @@ object FocusManager {
         if (!::appContext.isInitialized) {
             return false
         }
-        return PermissionManager.hasUsageStatsPermission(appContext) &&
-               PermissionManager.hasOverlayPermission(appContext) &&
+        return PermissionManager.hasOverlayPermission(appContext) &&
                AppManager.hasNotificationListenerPermission(appContext) &&
                PermissionManager.isAccessibilityServiceEnabled(appContext)
     }

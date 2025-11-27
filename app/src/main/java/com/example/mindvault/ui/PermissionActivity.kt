@@ -34,10 +34,6 @@ class PermissionActivity : ComponentActivity() {
         setContent {
             MindVaultTheme {
                 PermissionScreen(
-                    onGrantUsageStatsClick = {
-                        val intent = Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS)
-                        startActivity(intent)
-                    },
                     onGrantOverlayClick = {
                         val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                             Uri.parse("package:$packageName"))
@@ -70,34 +66,29 @@ class PermissionActivity : ComponentActivity() {
 
 @Composable
 fun PermissionScreen(
-    onGrantUsageStatsClick: () -> Unit,
     onGrantOverlayClick: () -> Unit,
     onGrantAccessibilityClick: () -> Unit,
     onAllPermissionsGranted: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
-    var hasUsageStats by remember { mutableStateOf(AppManager.hasUsageStatsPermission(context)) }
     var hasOverlay by remember { mutableStateOf(AppManager.hasSystemAlertWindowPermission(context)) }
     var hasAccessibility by remember { mutableStateOf(AppManager.hasAccessibilityServicePermission(context)) }
     
     // Dialog states
-    var showUsageStatsDialog by remember { mutableStateOf(false) }
     var showOverlayDialog by remember { mutableStateOf(false) }
     var showAccessibilityDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(1000)
-            val newUsageStats = AppManager.hasUsageStatsPermission(context)
             val newOverlay = AppManager.hasSystemAlertWindowPermission(context)
             val newAccessibility = AppManager.hasAccessibilityServicePermission(context)
             
-            if (newUsageStats != hasUsageStats || newOverlay != hasOverlay || newAccessibility != hasAccessibility) {
-                hasUsageStats = newUsageStats
+            if (newOverlay != hasOverlay || newAccessibility != hasAccessibility) {
                 hasOverlay = newOverlay
                 hasAccessibility = newAccessibility
                 
-                if (hasUsageStats && hasOverlay && hasAccessibility) {
+                if (hasOverlay && hasAccessibility) {
                     onAllPermissionsGranted()
                     break
                 }
@@ -142,50 +133,11 @@ fun PermissionScreen(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "MindVault needs three permissions to block apps during focus sessions:",
+                    text = "MindVault needs two permissions to block apps during focus sessions:",
                     textAlign = TextAlign.Center,
                     color = Color.White.copy(alpha = 0.8f)
                 )
                 Spacer(modifier = Modifier.height(24.dp))
-                
-                // Usage Stats Permission
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (hasUsageStats) "✓" else "○",
-                        color = if (hasUsageStats) Color.Green else Color.White,
-                        fontSize = 20.sp,
-                        modifier = Modifier.width(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Text(
-                            text = "Usage Access",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Monitor app usage",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Button(
-                        onClick = { showUsageStatsDialog = true },
-                        enabled = !hasUsageStats,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.White.copy(alpha = 0.2f),
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text("Grant")
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(16.dp))
                 
                 // Accessibility Service Permission
                 Row(
@@ -274,7 +226,7 @@ fun PermissionScreen(
                     }
                 }
                 
-                if (hasUsageStats && hasOverlay && hasAccessibility) {
+                if (hasOverlay && hasAccessibility) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "All permissions granted! ✓",
@@ -289,22 +241,6 @@ fun PermissionScreen(
     }
     
     // Permission Explanation Dialogs
-    PermissionExplanationDialog(
-        showDialog = showUsageStatsDialog,
-        onDismiss = { showUsageStatsDialog = false },
-        title = "Usage Access Permission",
-        explanation = "MindVault needs Usage Access permission to monitor which apps you're using during focus sessions.\n\n" +
-                "🔒 Privacy Guarantee:\n" +
-                "• We only check if blocked apps are being used\n" +
-                "• No personal data is collected or stored\n" +
-                "• All data stays on your device\n\n" +
-                "This permission helps make focus mode unbreakable by detecting when you try to open distracting apps.",
-        onGrantClick = {
-            showUsageStatsDialog = false
-            onGrantUsageStatsClick()
-        }
-    )
-    
     PermissionExplanationDialog(
         showDialog = showAccessibilityDialog,
         onDismiss = { showAccessibilityDialog = false },

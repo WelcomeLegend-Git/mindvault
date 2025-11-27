@@ -152,13 +152,6 @@ object StatisticsManager {
         val validatedRestTime = restTime.coerceAtMost(totalFocusTime - validatedStudyTime)
         val validatedCompletedSessions = completedSessions.coerceAtMost(totalSessions)
         
-        // Calculate productivity score if sessions exist
-        val productivityScore = if (totalSessions > 0) {
-            prefs.getFloat("daily_productivity_${dateKey}", 0f).coerceIn(0f, 100f)
-        } else {
-            0f
-        }
-        
         _dailyStats.value = DailyStats(
             date = today,
             totalFocusTime = totalFocusTime,
@@ -167,7 +160,7 @@ object StatisticsManager {
             completedSessions = validatedCompletedSessions,
             totalSessions = totalSessions,
             distractionCount = distractionCount,
-            productivityScore = productivityScore,
+            productivityScore = 0f,
             topBlockedApps = getTopBlockedApps(today)
         )
     }
@@ -191,7 +184,7 @@ object StatisticsManager {
                 completedSessions = prefs.getInt("daily_completed_${dateKey}", 0),
                 totalSessions = prefs.getInt("daily_total_${dateKey}", 0),
                 distractionCount = prefs.getInt("daily_distractions_${dateKey}", 0),
-                productivityScore = prefs.getFloat("daily_productivity_${dateKey}", 0f).coerceIn(0f, 100f),
+                productivityScore = 0f,
                 topBlockedApps = getTopBlockedApps(date)
             )
             dailyStatsList.add(dayStats)
@@ -220,9 +213,9 @@ object StatisticsManager {
         val avgSessionLength = if (totalSessions > 0) totalHours * 60 / totalSessions else 0L
         val currentStreak = calculateCurrentStreak()
         val longestStreak = prefs.getInt("longest_streak", 0)
-        val xp = prefs.getInt("experience_points", 0)
-        val level = calculateLevel(xp)
-        
+        val totalXp = prefs.getInt("experience_points", 0)
+        val (level, xpInLevel, xpForNextLevel) = calculateLevelAndProgress(totalXp)
+
         _userStats.value = UserStats(
             totalFocusHours = totalHours,
             totalSessions = totalSessions,
@@ -230,8 +223,8 @@ object StatisticsManager {
             currentStreak = currentStreak,
             longestStreak = longestStreak,
             level = level,
-            experiencePoints = xp,
-            nextLevelXP = calculateNextLevelXP(level),
+            experiencePoints = xpInLevel,
+            nextLevelXP = xpForNextLevel,
             achievements = loadAchievements(),
             rank = calculateRank(level),
             weeklyGoal = prefs.getLong("weekly_goal", 1200L),
@@ -289,19 +282,6 @@ object StatisticsManager {
         val validatedDistractions = session.distractionCount.coerceAtLeast(0)
         val newDistractionTotal = currentDistractions + validatedDistractions
         editor.putInt("daily_distractions_${dateKey}", newDistractionTotal)
-        
-        // Calculate realistic productivity score
-        val completedCount = prefs.getInt("daily_completed_${dateKey}", 0) + if (session.isCompleted) 1 else 0
-        val totalCount = totalSessions + 1
-        val completionRate = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
-        
-        // More realistic productivity calculation
-        val baseScore = completionRate * 70f // Completion contributes 70% max
-        val focusBonus = minOf(30f, (newFocusTotal / 60f) * 5f) // Focus time contributes up to 30% (based on daily total)
-        val distractionPenalty = minOf(40f, newDistractionTotal * 8f) // Distraction penalty up to 40%
-        
-        val productivityScore = (baseScore + focusBonus - distractionPenalty).coerceIn(0f, 100f)
-        editor.putFloat("daily_productivity_${dateKey}", productivityScore)
         
         editor.apply()
         loadDailyStats()
@@ -379,6 +359,20 @@ object StatisticsManager {
         }
         
         return xp.coerceIn(1, 1000) // Ensure reasonable XP range
+    }
+
+    private fun calculateLevelAndProgress(totalXp: Int): Triple<Int, Int, Int> {
+        var level = 1
+        var xpRemaining = totalXp.coerceAtLeast(0)
+        var xpForNext = 1000
+
+        while (xpRemaining >= xpForNext && level < 100) {
+            xpRemaining -= xpForNext
+            level++
+            xpForNext = (xpForNext * 1.2f).roundToInt().coerceAtMost(50000)
+        }
+
+        return Triple(level, xpRemaining, xpForNext)
     }
     
     private fun calculateLevel(xp: Int): Int {
@@ -567,7 +561,7 @@ object StatisticsManager {
     }
     
     fun getProductivityScore(): Float {
-        return _dailyStats.value?.productivityScore ?: 0f
+        return 0f
     }
 
     /**

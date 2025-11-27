@@ -38,8 +38,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mindvault.data.StatisticsManager
 import com.example.mindvault.data.UserManager
-import com.example.mindvault.utils.UsageStatsHelper
-import com.example.mindvault.utils.AppManager
 import com.example.mindvault.ui.theme.MindVaultTheme
 import kotlinx.coroutines.*
 import kotlin.math.roundToInt
@@ -195,17 +193,14 @@ fun StatisticsScreen() {
                         0 -> {
                             // Today Tab
                             item { HeroStatsCard(dailyStats, userStats) }
-                            item { TodayScreenTimeCard() }
                             
                             item { StreakCalendarCard(userStats) }
                             item { LevelProgressCard(userStats) }
-                            item { ProductivityScoreCard(dailyStats) }
                         }
                         1 -> {
                             // Week Tab
                             item { WeeklyHeroStatsCard(weeklyStats, userStats) }
                             item { WeeklyBarChartSection(weeklyStats) }
-                            item { WeeklyScreenTimeChart() }
                             item { StreakCalendarCard(userStats) }
                             
                         }
@@ -350,7 +345,7 @@ fun HeroStatsCard(dailyStats: com.example.mindvault.data.DailyStats?, userStats:
                 ) {
                     QuickStatItem(
                         title = "Sessions",
-                        value = "${dailyStats?.completedSessions ?: 0}/${dailyStats?.totalSessions ?: 0}",
+                        value = "${dailyStats?.completedSessions ?: 0}",
                         icon = Icons.Default.PlayArrow
                     )
                     val totalFocusMins = dailyStats?.totalFocusTime ?: 0L
@@ -406,198 +401,6 @@ fun QuickStatItem(
         )
     }
 }
-
-@Composable
-fun TodayScreenTimeCard() {
-    val context = LocalContext.current
-
-    // Check if usage stats permission is granted
-    val hasUsagePermission = remember { 
-        com.example.mindvault.utils.PermissionManager.hasUsageStatsPermission(context) 
-    }
-
-    // Load usage stats asynchronously to avoid blocking UI
-    val totalUsage by produceState(initialValue = emptyList<Pair<String, Int>>(/*name, minutes*/)) {
-        value = withContext(Dispatchers.IO) {
-            if (!hasUsagePermission) {
-                emptyList()
-            } else {
-                try {
-                    UsageStatsHelper.getTodayUsageStats(context)
-                        .mapValues { (_, v) -> (v / 60000L).toInt() }
-                        .toList()
-                        .filter { it.second > 0 }
-                        .sortedByDescending { it.second }
-                        .take(5)
-                        .map { AppManager.getAppName(context, it.first) to it.second }
-                } catch (e: Exception) {
-                    android.util.Log.e("StatisticsActivity", "Error loading usage stats", e)
-                    emptyList()
-                }
-            }
-        }
-    }
-
-    val focusUsage by produceState(initialValue = emptyList<Pair<String, Int>>()) {
-        value = withContext(Dispatchers.IO) {
-            if (!hasUsagePermission) {
-                emptyList()
-            } else {
-                try {
-                    val focusData = UsageStatsHelper.getUsageDuringFocus(context)
-                    android.util.Log.d("FocusDebug", "Focus sessions data: ${focusData.size} apps")
-                    
-                    // Process the actual focus data
-                    focusData
-                        .mapValues { (_, v) -> (v / 60000L).toInt() } // Convert to minutes
-                        .toList()
-                        .filter { it.second > 0 } // Only include apps with actual usage
-                        .sortedByDescending { it.second }
-                        .take(5)
-                        .map { AppManager.getAppName(context, it.first) to it.second }
-                } catch (e: Exception) {
-                    android.util.Log.e("StatisticsActivity", "Error loading focus usage stats", e)
-                    emptyList()
-                }
-            }
-        }
-    }
-
-    // Sum of app usage during focus sessions (minutes)
-    val totalFocusMinutesRaw = focusUsage.sumOf { it.second }
-    // Cap by the actual focus session duration to avoid impossible totals
-    val focusCapMinutes = remember { UsageStatsHelper.getTotalFocusMinutesToday(context) }
-    val totalFocusMinutes = totalFocusMinutesRaw.coerceAtMost(focusCapMinutes)
-    val totalAllMinutes = totalUsage.sumOf { it.second }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White.copy(alpha = 0.05f)
-        ),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Text(
-                text = "Screen Time Overview",
-                color = Color.White,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            if (!hasUsagePermission) {
-                // Show permission required message
-                Column {
-                    Text(
-                        text = "Usage Access Permission Required",
-                        color = Color(0xFFFFB74D),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "To see app usage during focus sessions, please grant Usage Access permission in Settings.",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 14.sp
-                    )
-                }
-            } else {
-                // Focus Mode Section
-                if (focusUsage.isEmpty()) {
-                    AppUsagePieSection(
-                        title = "During Focus Mode",
-                        usageList = emptyList(),
-                        totalMinutes = 0
-                    )
-                } else {
-                    // Normalize usage list so it does not exceed the cap
-                    val normalizedFocusList = if (totalFocusMinutesRaw <= 0 || totalFocusMinutesRaw <= totalFocusMinutes) {
-                        focusUsage
-                    } else {
-                        val ratio = if (totalFocusMinutesRaw > 0) totalFocusMinutes.toFloat() / totalFocusMinutesRaw.toFloat() else 0f
-                        focusUsage.map { (name, mins) -> name to kotlin.math.floor(mins * ratio).toInt() }
-                    }
-                    AppUsagePieSection(
-                        title = "During Focus Mode",
-                        usageList = normalizedFocusList,
-                        totalMinutes = totalFocusMinutes
-                    )
-                }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-                
-                // All Apps Section
-                if (totalUsage.isEmpty()) {
-                    AppUsagePieSection(
-                        title = "Today (All Apps)",
-                        usageList = emptyList(),
-                        totalMinutes = 0
-                    )
-                } else {
-                    AppUsagePieSection(
-                        title = "Today (All Apps)",
-                        usageList = totalUsage,
-                        totalMinutes = totalAllMinutes
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AppUsageSection(title: String, usageList: List<Pair<String, Int>>, totalMinutes: Int) {
-    Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = Icons.Default.PieChart,
-                contentDescription = null,
-                tint = Color(0xFF00E676),
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = title,
-                color = Color.White.copy(alpha = 0.9f),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "${totalMinutes}m",
-                color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        usageList.forEach { (packageName, minutes) ->
-            val percent = if (totalMinutes > 0) minutes / totalMinutes.toFloat() else 0f
-            Column {
-                Text(
-                    text = packageName.substringAfterLast('.'),
-                    color = Color.White.copy(alpha = 0.8f),
-                    fontSize = 12.sp
-                )
-                LinearProgressIndicator(
-                    progress = percent,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(6.dp)
-                        .clip(RoundedCornerShape(3.dp)),
-                    color = Color(0xFF00E676),
-                    trackColor = Color.White.copy(alpha = 0.1f)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-        }
-    }
-}
-
-            
-
 
 @Composable
 fun ProgressItem(
@@ -1295,10 +1098,6 @@ private fun generateInsights(dailyStats: com.example.mindvault.data.DailyStats?)
         
         if (stats.totalFocusTime > 120) {
             insights.add("Excellent focus time! You've exceeded 2 hours today.")
-        }
-        
-        if (stats.productivityScore >= 90) {
-            insights.add("Outstanding productivity score of ${stats.productivityScore.roundToInt()}%!")
         }
     }
     

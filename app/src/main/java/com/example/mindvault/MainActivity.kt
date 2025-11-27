@@ -150,7 +150,6 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
     val isLoggedIn by UserManager.isLoggedIn.collectAsStateWithLifecycle()
     val allPermissionsGranted = remember {
         derivedStateOf {
-            PermissionManager.hasUsageStatsPermission(context) &&
             PermissionManager.hasOverlayPermission(context) &&
             AppManager.hasNotificationListenerPermission(context) &&
             PermissionManager.isAccessibilityServiceEnabled(context)
@@ -306,20 +305,18 @@ fun StatusCard() {
     val activeSlot by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
     val configuration by FocusManager.configurationFlow.collectAsStateWithLifecycle()
     
-    // Check all permissions
-    val hasUsageStats = remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
+    // Check all permissions (excluding usage stats)
     val hasOverlay = remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
     val hasNotification = remember { mutableStateOf(AppManager.hasNotificationListenerPermission(context)) }
     val hasAccessibility = remember { mutableStateOf(PermissionManager.isAccessibilityServiceEnabled(context)) }
     
-    val allPermissionsGranted = hasUsageStats.value && hasOverlay.value && hasNotification.value && hasAccessibility.value
+    val allPermissionsGranted = hasOverlay.value && hasNotification.value && hasAccessibility.value
     
     // Re-check permissions on resume
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                hasUsageStats.value = PermissionManager.hasUsageStatsPermission(context)
                 hasOverlay.value = PermissionManager.hasOverlayPermission(context)
                 hasNotification.value = AppManager.hasNotificationListenerPermission(context)
                 hasAccessibility.value = PermissionManager.isAccessibilityServiceEnabled(context)
@@ -432,13 +429,11 @@ fun StatusCard() {
 @Composable
 fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     val context = LocalContext.current
-    var hasUsageStats by remember { mutableStateOf(PermissionManager.hasUsageStatsPermission(context)) }
     var hasOverlay by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
     var hasNotification by remember { mutableStateOf(AppManager.hasNotificationListenerPermission(context)) }
     var hasAccessibility by remember { mutableStateOf(PermissionManager.isAccessibilityServiceEnabled(context)) }
     
     // Dialog states
-    var showUsageStatsDialog by remember { mutableStateOf(false) }
     var showOverlayDialog by remember { mutableStateOf(false) }
     var showAccessibilityDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
@@ -448,7 +443,6 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
-                hasUsageStats = PermissionManager.hasUsageStatsPermission(context)
                 hasOverlay = PermissionManager.hasOverlayPermission(context)
                 hasNotification = AppManager.hasNotificationListenerPermission(context)
                 hasAccessibility = PermissionManager.isAccessibilityServiceEnabled(context)
@@ -461,7 +455,7 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
         }
     }
 
-    val allPermissionsGranted = hasUsageStats && hasOverlay && hasNotification && hasAccessibility
+    val allPermissionsGranted = hasOverlay && hasNotification && hasAccessibility
     
     // Auto-collapse when all permissions are granted
     LaunchedEffect(allPermissionsGranted) {
@@ -556,10 +550,6 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
                     ) {
                         Spacer(modifier = Modifier.height(16.dp))
                         
-                        PermissionRow("Usage Stats", hasUsageStats) { showUsageStatsDialog = true }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
                         PermissionRow("Overlay", hasOverlay) { showOverlayDialog = true }
                         
                         Spacer(modifier = Modifier.height(12.dp))
@@ -576,22 +566,6 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     }
     
     // Permission Explanation Dialogs
-    PermissionExplanationDialog(
-        showDialog = showUsageStatsDialog,
-        onDismiss = { showUsageStatsDialog = false },
-        title = "Usage Access Permission",
-        explanation = "MindVault needs Usage Access permission to monitor which apps you're using during focus sessions.\n\n" +
-                "🔒 Privacy Guarantee:\n" +
-                "• We only check if blocked apps are being used\n" +
-                "• No personal data is collected or stored\n" +
-                "• All data stays on your device\n\n" +
-                "This permission helps make focus mode unbreakable by detecting when you try to open distracting apps.",
-        onGrantClick = {
-            showUsageStatsDialog = false
-            PermissionManager.requestUsageStatsPermission(context)
-        }
-    )
-    
     PermissionExplanationDialog(
         showDialog = showAccessibilityDialog,
         onDismiss = { showAccessibilityDialog = false },

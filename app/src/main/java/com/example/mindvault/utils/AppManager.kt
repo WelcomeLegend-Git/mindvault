@@ -2,12 +2,10 @@ package com.example.mindvault.utils
 
 import com.example.mindvault.model.AppInfo
 
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.os.Process
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -135,16 +133,6 @@ object AppManager {
         )
     }
 
-    fun hasUsageStatsPermission(context: Context): Boolean {
-        val appOps = context.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-        val mode = appOps.checkOpNoThrow(
-            AppOpsManager.OPSTR_GET_USAGE_STATS,
-            Process.myUid(),
-            context.packageName
-        )
-        return mode == AppOpsManager.MODE_ALLOWED
-    }
-    
     fun hasSystemAlertWindowPermission(context: Context): Boolean {
         return android.provider.Settings.canDrawOverlays(context)
     }
@@ -201,8 +189,7 @@ object AppManager {
     }
     
     fun hasAllRequiredPermissions(context: Context): Boolean {
-        return hasUsageStatsPermission(context) && 
-               hasSystemAlertWindowPermission(context) &&
+        return hasSystemAlertWindowPermission(context) &&
                hasAccessibilityServicePermission(context)
     }
     

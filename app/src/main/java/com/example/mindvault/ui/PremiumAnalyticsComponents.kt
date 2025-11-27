@@ -112,31 +112,28 @@ fun FocusHeatmapCard(userStats: UserStats?) {
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Get context outside remember block
             val context = androidx.compose.ui.platform.LocalContext.current
-            
-            // Generate real heatmap data from StatisticsManager
-            val heatmapData = remember(context) {
-                (0..29).map { dayOffset ->
-                    val date = LocalDate.now().minusDays(dayOffset.toLong())
-                    val hasFocus = com.example.mindvault.data.StatisticsManager.hadFocusOn(date)
-                    val intensity = if (hasFocus) {
-                        // Get actual focus time for intensity calculation
-                        val prefs = context.getSharedPreferences("mindvault_stats", android.content.Context.MODE_PRIVATE)
-                        val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
-                        val focusMinutes = prefs.getLong("daily_focus_${dateKey}", 0L)
-                        when {
-                            focusMinutes >= 300 -> 4  // 5+ hours
-                            focusMinutes >= 180 -> 3  // 3+ hours  
-                            focusMinutes >= 120 -> 2  // 2+ hours
-                            focusMinutes >= 30 -> 1   // 30+ minutes
-                            else -> 0
-                        }
-                    } else 0
-                    date to intensity
-                }
+
+            // Generate real heatmap data from StatisticsManager (recomputed on each recomposition)
+            val heatmapData = (0..29).map { dayOffset ->
+                val date = LocalDate.now().minusDays(dayOffset.toLong())
+                val hasFocus = com.example.mindvault.data.StatisticsManager.hadFocusOn(date)
+                val intensity = if (hasFocus) {
+                    // Get actual focus time for intensity calculation
+                    val prefs = context.getSharedPreferences("mindvault_stats", android.content.Context.MODE_PRIVATE)
+                    val dateKey = date.format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                    val focusMinutes = prefs.getLong("daily_focus_${dateKey}", 0L)
+                    when {
+                        focusMinutes >= 300 -> 4  // 5+ hours
+                        focusMinutes >= 180 -> 3  // 3+ hours  
+                        focusMinutes >= 120 -> 2  // 2+ hours
+                        focusMinutes >= 30 -> 1   // 30+ minutes
+                        else -> 0
+                    }
+                } else 0
+                date to intensity
             }
-            
+
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -150,16 +147,54 @@ fun FocusHeatmapCard(userStats: UserStats?) {
                                     .background(
                                         when (intensity) {
                                             0 -> Color.White.copy(alpha = 0.1f)
-                                            1 -> Color(0xFF00E676).copy(alpha = 0.3f)
-                                            2 -> Color(0xFF00E676).copy(alpha = 0.5f)
-                                            3 -> Color(0xFF00E676).copy(alpha = 0.7f)
-                                            else -> Color(0xFF00E676)
+                                            1 -> Color(0xFFFFCCBC) // light red
+                                            2 -> Color(0xFFFF8A65)
+                                            3 -> Color(0xFFF4511E)
+                                            else -> Color(0xFFD32F2F) // strongest red
                                         }
                                     )
                             )
                         }
                     }
                 }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Legend: Less → More
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Less",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 12.sp
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(0, 1, 2, 3, 4).forEach { level ->
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(
+                                    when (level) {
+                                        0 -> Color.White.copy(alpha = 0.1f)
+                                        1 -> Color(0xFFFFCCBC)
+                                        2 -> Color(0xFFFF8A65)
+                                        3 -> Color(0xFFF4511E)
+                                        else -> Color(0xFFD32F2F)
+                                    }
+                                )
+                        )
+                    }
+                }
+                Text(
+                    text = "More",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 12.sp
+                )
             }
         }
     }
@@ -466,18 +501,25 @@ private fun generateSmartInsights(dailyStats: DailyStats?, weeklyStats: WeeklySt
     
     val dailyFocus = dailyStats?.totalFocusTime ?: 0L
     val weeklyAverage = weeklyStats?.averageDailyFocus ?: 0L
-    
-    if (dailyFocus > 60) {
-        insights.add(SmartInsight("🔥", "Great Focus Today!", "You've focused for over an hour today"))
+    val currentStreak = weeklyStats?.currentStreak ?: 0
+    val longestStreak = weeklyStats?.longestStreak ?: 0
+
+    if (dailyFocus >= 120) {
+        insights.add(SmartInsight("🔥", "Great Focus Today!", "You've focused for over 2 hours today."))
+    } else if (dailyFocus in 60..119) {
+        insights.add(SmartInsight("⏱️", "Solid Session", "You've focused for over an hour today."))
     }
-    
-    if (weeklyAverage > 45) {
-        insights.add(SmartInsight("💪", "Strong Week", "You're averaging ${weeklyAverage}min daily focus"))
+
+    if (weeklyAverage >= 60) {
+        insights.add(SmartInsight("💪", "Strong Week", "You're averaging ${weeklyAverage} min of focus per day this week."))
     }
-    
-    val productivity = dailyStats?.productivityScore ?: 100f
-    if (productivity > 85) {
-        insights.add(SmartInsight("⭐", "High Productivity", "Your focus quality is excellent today"))
+
+    if (currentStreak >= 3) {
+        insights.add(SmartInsight("🔥", "Streak On!", "You're on a ${currentStreak}-day focus streak."))
+    }
+
+    if (longestStreak >= 7) {
+        insights.add(SmartInsight("🏆", "Personal Record", "Your longest streak is ${longestStreak} days. Can you beat it?"))
     }
     
     return insights.ifEmpty {
