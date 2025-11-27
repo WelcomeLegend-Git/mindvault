@@ -234,6 +234,21 @@ object AuthManager {
         }
     }
 
+    /**
+     * Enqueue a background retry for backup if foreground sync fails.
+     */
+    fun enqueueBackupRetry() {
+        try {
+            val wm = androidx.work.WorkManager.getInstance(MindVaultApplication.instance)
+            val req = androidx.work.OneTimeWorkRequestBuilder<com.example.mindvault.data.BackupSyncWorker>()
+                .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+                .build()
+            wm.enqueue(req)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to enqueue backup retry", e)
+        }
+    }
+
     private fun getPrefsAsJson(context: Context, prefsName: String): String {
         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         return gson.toJson(prefs.all)

@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "930728313401-8g1rsgm9dci3sivbed6foaalfhpldaiv.apps.googleusercontent.com",
+          "client_id": "930728313401-1kqg2l5r0d8ra1073q3o35t0jhr0g2dj.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.example.mindvault",
-            "certificate_hash": "37cbe067acaba41c266926f821130de66416f1bf"
+            "certificate_hash": "8889fd9420173cb9c391b654ac387ddc6044ded3"
           }
         },
         {

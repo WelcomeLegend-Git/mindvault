@@ -10,6 +10,10 @@ import com.example.mindvault.data.AppPasswordManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
+import java.util.concurrent.TimeUnit
 
 class MindVaultApplication : Application() {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -44,6 +48,21 @@ class MindVaultApplication : Application() {
             Log.d("MindVaultApplication", "All managers initialized successfully")
         } catch (e: Exception) {
             Log.e("MindVaultApplication", "Error initializing managers", e)
+        }
+
+        // Schedule periodic background backups (runs even if app not in foreground)
+        try {
+            val request = PeriodicWorkRequestBuilder<com.example.mindvault.data.BackupSyncWorker>(
+                12, TimeUnit.HOURS
+            ).build()
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "mindvault_cloud_backup",
+                ExistingPeriodicWorkPolicy.UPDATE,
+                request
+            )
+            Log.d("MindVaultApplication", "Scheduled periodic backup worker")
+        } catch (e: Exception) {
+            Log.e("MindVaultApplication", "Failed to schedule backup worker", e)
         }
     }
 }

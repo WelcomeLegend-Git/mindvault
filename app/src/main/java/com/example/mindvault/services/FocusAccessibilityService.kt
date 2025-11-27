@@ -9,22 +9,26 @@ import android.view.accessibility.AccessibilityEvent
 import com.example.mindvault.AppBlockedActivity
 import com.example.mindvault.data.FocusManager
 import com.example.mindvault.data.StatisticsManager
+import android.graphics.Rect
+import com.example.mindvault.utils.AppManager
+import com.example.mindvault.utils.OverlayBlocker
 
 class FocusAccessibilityService : AccessibilityService() {
 
     private val TAG = "FocusAccessibilityService"
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+        if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
+            event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             val packageName = event.packageName?.toString()
             if (packageName != null) {
                 // Log.d(TAG, "Foreground app: $packageName") // Verbose logging
-                checkAndBlockApp(packageName)
+                checkAndBlockApp(packageName, event)
             }
         }
     }
 
-    private fun checkAndBlockApp(packageName: String) {
+    private fun checkAndBlockApp(packageName: String, event: AccessibilityEvent?) {
         if (!FocusManager.isInitialized()) {
             Log.w(TAG, "FocusManager not initialized, skipping block check.")
             return
@@ -41,7 +45,20 @@ class FocusAccessibilityService : AccessibilityService() {
                 // Record distraction in statistics
                 StatisticsManager.recordDistraction(packageName)
                 
-                showBlockedScreen(packageName)
+                // Try overlay block if app appears in small/floating window
+                val bounds = getLatestWindowBounds(event)
+                if (bounds != null && bounds.width() < resources.displayMetrics.widthPixels &&
+                    bounds.height() < resources.displayMetrics.heightPixels) {
+                    val label = AppManager.getAppName(this, packageName)
+                    OverlayBlocker.show(this, bounds, label)
+                    // Additionally, attempt to close the offending window so it cannot continue in mini mode
+                    try {
+                        performGlobalAction(GLOBAL_ACTION_BACK)
+                    } catch (_: Exception) { }
+                } else {
+                    OverlayBlocker.hide(this)
+                    showBlockedScreen(packageName)
+                }
             }
         }
     }
@@ -63,6 +80,17 @@ class FocusAccessibilityService : AccessibilityService() {
         startActivity(intent)
     }
 
+    private fun getLatestWindowBounds(event: AccessibilityEvent?): Rect? {
+        try {
+            val node = event?.source ?: return null
+            val rect = Rect()
+            node.getBoundsInScreen(rect)
+            return rect
+        } catch (_: Exception) {
+            return null
+        }
+    }
+
     override fun onInterrupt() {
         Log.d(TAG, "Service interrupted.")
     }
@@ -70,7 +98,7 @@ class FocusAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         val info = AccessibilityServiceInfo()
-        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+        info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
         info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
         serviceInfo = info
