@@ -8,6 +8,7 @@ import com.google.gson.JsonSyntaxException
 import com.google.gson.TypeAdapter
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
+import com.google.gson.reflect.TypeToken
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import com.example.mindvault.model.FocusConfiguration
@@ -41,10 +42,21 @@ object FocusDataStore {
         val json = prefs.getString(CONFIG_KEY, null)
         return if (json != null) {
             try {
-                val config = gson.fromJson(json, FocusConfiguration::class.java)
+                val type = object : TypeToken<FocusConfiguration>() {}.type
+                val config = gson.fromJson<FocusConfiguration>(json, type)
                 Log.d("FocusDataStore", "Configuration loaded successfully: $json")
-                config ?: FocusConfiguration()
-            } catch (e: JsonSyntaxException) {
+                if (config != null) {
+                    // Sanitize the config to ensure lists are never null due to Gson reflection
+                    val nonNullTimeSlots = config.timeSlots ?: emptyList()
+                    val nonNullSelectedApps = config.selectedApps ?: emptyList()
+                    return config.copy(
+                        timeSlots = nonNullTimeSlots,
+                        selectedApps = nonNullSelectedApps
+                    )
+                } else {
+                    return FocusConfiguration()
+                }
+            } catch (e: Exception) {
                 Log.e("FocusDataStore", "Error parsing configuration JSON", e)
                 FocusConfiguration() // Return default config on error
             }

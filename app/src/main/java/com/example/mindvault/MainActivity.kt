@@ -61,7 +61,11 @@ import com.example.mindvault.ui.AchievementsActivity
 import com.example.mindvault.ui.HelpCenterActivity
 import com.example.mindvault.data.AppPasswordManager
 import com.example.mindvault.ui.LockScreenActivity
+import com.example.mindvault.ui.components.CosmicBlackholeToggle
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -157,6 +161,10 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
     }
     // Listen to PermissionStatusCard expansion state
     val expandedState = remember { mutableStateOf(true) }
+    
+    val focusModeActive by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
+    val isFocusEnabled = focusModeActive != null
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -166,6 +174,11 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
                 )
             )
     ) {
+        // Full Screen Ambient Animations
+        if (isFocusEnabled) {
+            FullScreenAmbientEffects()
+        }
+        
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -270,7 +283,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                     .size(width = 220.dp, height = 110.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Switch(
+                CosmicBlackholeToggle(
                     checked = switchState,
                     onCheckedChange = {
                         if (isToggleEnabled || it) {
@@ -279,22 +292,29 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                         }
                     },
                     enabled = isToggleEnabled || switchState,
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color.White,
-                        checkedTrackColor = Color(0xFF8F5CFF),
-                        uncheckedThumbColor = Color.Gray,
-                        uncheckedTrackColor = Color.DarkGray
-                    ),
-                    modifier = Modifier
-                        .graphicsLayer(
-                            scaleX = 2.2f,
-                            scaleY = 2.2f,
-                            alpha = if (isToggleEnabled) 1f else 0.4f
-                        )
+                    modifier = Modifier.fillMaxSize()
                 )
-                // Removed the yellow statement
             }
             // --- END REPLACEMENT ---
+        }
+    }
+}
+
+@Composable
+fun FullScreenAmbientEffects() {
+    val infiniteTransition = rememberInfiniteTransition(label = "ambientFullscreen")
+
+    // Starfield raining down
+    val fallOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 2000f,
+        animationSpec = infiniteRepeatable(tween(10000, easing = LinearEasing), RepeatMode.Restart), label = "starFall"
+    )
+    Canvas(modifier = Modifier.fillMaxSize().background(Color(0xFF050013).copy(alpha = 0.8f))) {
+        for (i in 0..50) {
+            val x = (i * 87) % size.width
+            val y = ((i * 31) + fallOffset) % size.height
+            drawCircle(color = Color.White.copy(alpha = 0.4f), radius = (i % 3) + 1f, center = Offset(x, y))
         }
     }
 }
@@ -467,26 +487,10 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
         }
     }
     
-    val transition = updateTransition(expandedState.value, label = "Permission Card Transition")
-    
-    val cardHeight by transition.animateDp(
-        transitionSpec = { tween(durationMillis = 500, easing = FastOutSlowInEasing) },
-        label = "Card Height"
-    ) { expanded ->
-        if (expanded) 300.dp else 60.dp
-    }
-    
-    val alpha by transition.animateFloat(
-        transitionSpec = { tween(durationMillis = 300) },
-        label = "Content Alpha"
-    ) { expanded ->
-        if (expanded) 1f else 0f
-    }
-    
     Card(
         modifier = Modifier
             .fillMaxWidth(0.95f)
-            .height(cardHeight)
+            .animateContentSize(animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing))
             .clickable { 
                 if (allPermissionsGranted) {
                     expandedState.value = !expandedState.value
@@ -544,10 +548,8 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
                     }
                 }
                 
-                if (alpha > 0.0f) {
-                    Column(
-                        modifier = Modifier.alpha(alpha)
-                    ) {
+                if (expandedState.value) {
+                    Column {
                         Spacer(modifier = Modifier.height(16.dp))
                         
                         PermissionRow("Overlay", hasOverlay) { showOverlayDialog = true }

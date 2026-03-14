@@ -43,6 +43,7 @@ import com.example.mindvault.ui.EditProfileActivity
 import com.example.mindvault.ui.SecurityActivity
 import com.example.mindvault.ui.StatisticsActivity
 import com.example.mindvault.ui.AchievementsActivity
+import com.example.mindvault.ui.DeveloperSettingsActivity
 
 class ProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -547,6 +548,9 @@ fun GuestProfileCard() {
 @Composable
 fun SettingsSection() {
     val context = LocalContext.current
+    var showDeveloperTestingDialog by remember { mutableStateOf(false) }
+    var passwordInput by remember { mutableStateOf("") }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -599,8 +603,76 @@ fun SettingsSection() {
                     subtitle = "Customize your alerts",
                     onClick = { context.startActivity(Intent(context, NotificationSettingsActivity::class.java)) }
                 )
+                
+                // Developer Section
+                ProfileOptionItem(
+                    icon = Icons.Default.DeveloperMode,
+                    title = "Developer Testing",
+                    subtitle = "Debug options and experimental features"
+                ) {
+                    showDeveloperTestingDialog = true
+                }
             }
         }
+    }
+
+    if (showDeveloperTestingDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showDeveloperTestingDialog = false 
+                passwordInput = "" 
+            },
+            title = { Text("Developer Access") },
+            text = {
+                Column {
+                    Text("Please enter the developer password:")
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = passwordInput,
+                        onValueChange = { passwordInput = it },
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword
+                        ),
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        colors = TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent
+                        )
+                    )
+                }
+            },
+            containerColor = Color(0xFF16213E),
+            titleContentColor = Color.White,
+            textContentColor = Color.White,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (passwordInput == "878955") {
+                            showDeveloperTestingDialog = false
+                            passwordInput = ""
+                            context.startActivity(Intent(context, DeveloperSettingsActivity::class.java))
+                        } else {
+                            Toast.makeText(context, "Incorrect password", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                ) {
+                    Text("Verify", color = Color(0xFF6C63FF))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { 
+                        showDeveloperTestingDialog = false 
+                        passwordInput = ""
+                    }
+                ) {
+                    Text("Cancel", color = Color.White.copy(alpha = 0.7f))
+                }
+            }
+        )
     }
 }
 

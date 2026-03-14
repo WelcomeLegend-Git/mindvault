@@ -153,6 +153,11 @@
             </intent-filter>
         </service>
             
+        <activity
+            android:name=".ui.DeveloperSettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MindVault" />
+        
         <receiver
             android:name=".BootReceiver"
             android:enabled="true"
