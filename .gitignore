@@ -1,15 +1,44 @@
+# Gradle
 *.iml
 .gradle
-/local.properties
+/build
+/app/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Local config
+local.properties
+
+# IDE
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+
+# Kotlin compiler
+.kotlin/
+
+# OS
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
+Thumbs.db
+
+# Logs & Build Artifacts
+*.log
+*.txt
+!README.md
+!LICENSE
+
+# Secrets
+google-services.json
+*.keystore
+*.jks
+
+# Release build artifacts
+app/release/
+
+# Debug keystore copies
+%USERPROFILE%/
