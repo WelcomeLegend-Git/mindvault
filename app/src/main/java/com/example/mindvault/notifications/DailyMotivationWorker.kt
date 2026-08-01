@@ -12,11 +12,22 @@ class DailyMotivationWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        // Pick deterministic quote of the day
-        val quotes = getMotivationQuotes()
-        val index = Random.nextInt(quotes.size)
-        val quote = quotes[index]
-        NotificationHelper.showMotivationNotification(appContext, quote)
+        // Fetch a quote from the unified engine, leveraging the "Deck of Cards" to avoid repeats
+        val quoteResult = com.example.mindvault.engine.QuoteEngine.getQuoteForContext(
+            context = appContext,
+            isStudySessionActive = false,
+            isScrollingSocialMedia = false
+        )
+        
+        // Show the fancy bitmap notification
+        com.example.mindvault.ui.notifications.CustomNotificationBuilder.showBitmapNotification(
+            context = appContext,
+            quoteText = quoteResult.quote.q,
+            authorText = quoteResult.quote.a,
+            fontFileName = quoteResult.fontFileName,
+            vibe = quoteResult.vibe
+        )
+        
         return Result.success()
     }
 

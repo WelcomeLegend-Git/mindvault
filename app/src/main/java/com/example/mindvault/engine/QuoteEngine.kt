@@ -59,26 +59,12 @@ object QuoteEngine {
             else -> ScenarioVibe.REFLECTIVE_WINDDOWN
         }
 
-        // Determine matching Quote Files/Categories (Can load dynamically, but hardcoded mappings for now)
-        val quoteFiles = when (vibe) {
-            ScenarioVibe.HARSH_WAKEUP -> listOf(
-                "quotes/focus_power/gemini-code-1785566763527.json", 
-                "quotes/telegram_quotes.json"
-            )
-            ScenarioVibe.ENCOURAGING -> listOf(
-                "quotes/focus_power/aaasdf.json",
-                "quotes/wisdom_philosophy/gemini-code-1785571941483.json"
-            )
-            ScenarioVibe.MINDFUL_REFOCUS -> listOf(
-                "quotes/mindfulness_presence/gemini-code-1785571562873.json",
-                "quotes/telegram_quotes.json"
-            )
-            ScenarioVibe.HIGH_ENERGY -> listOf(
-                "quotes/focus_power/askddfj.json"
-            )
-            ScenarioVibe.REFLECTIVE_WINDDOWN -> listOf(
-                "quotes/resilience_healing/gemini-code-1785571644654.json"
-            )
+        val quoteDirectories = when (vibe) {
+            ScenarioVibe.HARSH_WAKEUP -> listOf("quotes/focus_power", "quotes/telegram_quotes.json")
+            ScenarioVibe.ENCOURAGING -> listOf("quotes/focus_power", "quotes/wisdom_philosophy")
+            ScenarioVibe.MINDFUL_REFOCUS -> listOf("quotes/mindfulness_presence", "quotes/telegram_quotes.json")
+            ScenarioVibe.HIGH_ENERGY -> listOf("quotes/focus_power")
+            ScenarioVibe.REFLECTIVE_WINDDOWN -> listOf("quotes/resilience_healing")
         }
 
         // Select a Font matching the vibe
@@ -91,25 +77,46 @@ object QuoteEngine {
         }
 
         val allQuotes = mutableListOf<Quote>()
-        for (file in quoteFiles) {
+        
+        fun loadFromFile(path: String) {
             try {
-                val inputStream = context.assets.open(file)
+                val inputStream = context.assets.open(path)
                 val reader = InputStreamReader(inputStream)
                 val listType = object : TypeToken<List<Quote>>() {}.type
                 val quotes: List<Quote> = gson.fromJson(reader, listType) ?: emptyList()
                 allQuotes.addAll(quotes)
                 reader.close()
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to load quotes from $file", e)
+                Log.e(TAG, "Failed to load quotes from $path", e)
             }
         }
 
-        // Fallback if list is empty due to missing files or parsing errors
-        val selectedQuote = if (allQuotes.isNotEmpty()) {
-            allQuotes.random(random)
-        } else {
-            Quote("Put down the screen. Look up at the room. Take a deep breath.", "MindVault", "digital_detox")
+        for (path in quoteDirectories) {
+            try {
+                val files = context.assets.list(path)
+                if (files.isNullOrEmpty()) {
+                    if (path.endsWith(".json")) {
+                        loadFromFile(path)
+                    }
+                } else {
+                    for (file in files) {
+                        if (file.endsWith(".json")) {
+                            loadFromFile("$path/$file")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                if (path.endsWith(".json")) {
+                    loadFromFile(path)
+                }
+            }
         }
+
+        val deckId = "deck_${vibe.name}"
+        val selectedQuote = QuoteDeckManager.draw(context, deckId, allQuotes) { 
+            // Use the quote text itself as the unique ID to ensure identical quotes aren't repeated
+            it.q.hashCode().toString() 
+        } ?: Quote("Put down the screen. Look up at the room. Take a deep breath.", "MindVault", "digital_detox")
 
         return QuoteResult(selectedQuote, font, vibe)
     }
