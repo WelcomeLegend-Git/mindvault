@@ -89,17 +89,32 @@ fun NotificationSettingsScreen() {
 
 
 
-    val permissionLauncher = rememberLauncherForActivityResult(
+    var pendingToggle by remember { mutableStateOf<String?>(null) }
+    var pendingDailyMotivation by remember { mutableStateOf(false) }
+
+    val genericNotificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (granted) {
-            dailyMotivationEnabled = true
-            savePref("daily_motivation", true)
-            MotivationScheduler.scheduleDailyMotivation(context)
-        } else {
-            dailyMotivationEnabled = false
+            when (pendingToggle) {
+                "achievement" -> {
+                    achievementEnabled = true
+                    savePref("achievement", true)
+                }
+                "focus" -> {
+                    focusEnabled = true
+                    savePref("focus", true)
+                    FocusReminderScheduler.scheduleFocusReminders(context)
+                }
+                "motivation" -> {
+                    motivationEnabled = true
+                    savePref("motivation", true)
+                }
+            }
         }
+        pendingToggle = null
     }
+
     val usageAccessLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
@@ -128,6 +143,37 @@ fun NotificationSettingsScreen() {
         }
     }
 
+    val dailyMotivationUsageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        usageAccessGranted = UsageAccessManager.hasUsageAccess(context)
+        if (pendingDailyMotivation && usageAccessGranted &&
+            NotificationPermissionUtils.hasPermission(context)
+        ) {
+            dailyMotivationEnabled = true
+            savePref("daily_motivation", true)
+            MotivationScheduler.scheduleDailyMotivation(context)
+        }
+        pendingDailyMotivation = false
+    }
+
+    val dailyMotivationNotificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            usageAccessGranted = UsageAccessManager.hasUsageAccess(context)
+            if (usageAccessGranted) {
+                dailyMotivationEnabled = true
+                savePref("daily_motivation", true)
+                MotivationScheduler.scheduleDailyMotivation(context)
+                pendingDailyMotivation = false
+            } else {
+                dailyMotivationUsageLauncher.launch(UsageAccessManager.usageAccessSettingsIntent())
+            }
+        } else {
+            pendingDailyMotivation = false
+        }
+    }
 
     val motivationQuotes = remember { getMotivationQuotes() }
     val today = remember { LocalDate.now().toEpochDay() }
@@ -137,24 +183,52 @@ fun NotificationSettingsScreen() {
 
     // region toggle handlers
     fun handleAchievementChange(enabled: Boolean) {
-        achievementEnabled = enabled
-        savePref("achievement", enabled)
+        if (!enabled) {
+            achievementEnabled = false
+            savePref("achievement", false)
+            return
+        }
+        if (NotificationPermissionUtils.hasPermission(context)) {
+            achievementEnabled = true
+            savePref("achievement", true)
+        } else {
+            pendingToggle = "achievement"
+            genericNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     fun handleFocusChange(enabled: Boolean) {
-        focusEnabled = enabled
-        savePref("focus", enabled)
-        if (enabled) {
+        if (!enabled) {
+            focusEnabled = false
+            savePref("focus", false)
+            FocusReminderScheduler.cancelFocusReminders(context)
+            return
+        }
+        if (NotificationPermissionUtils.hasPermission(context)) {
+            focusEnabled = true
+            savePref("focus", true)
             FocusReminderScheduler.scheduleFocusReminders(context)
         } else {
-            FocusReminderScheduler.cancelFocusReminders(context)
+            pendingToggle = "focus"
+            genericNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 
     fun handleMotivationChange(enabled: Boolean) {
-        motivationEnabled = enabled
-        savePref("motivation", enabled)
+        if (!enabled) {
+            motivationEnabled = false
+            savePref("motivation", false)
+            return
+        }
+        if (NotificationPermissionUtils.hasPermission(context)) {
+            motivationEnabled = true
+            savePref("motivation", true)
+        } else {
+            pendingToggle = "motivation"
+            genericNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
+
     fun handleSocialScrollReminderChange(enabled: Boolean) {
         if (!enabled) {
             pendingSocialScrollEnable = false
@@ -176,20 +250,26 @@ fun NotificationSettingsScreen() {
         }
     }
 
-
     fun handleDailyMotivationChange(enabled: Boolean) {
-        if (enabled) {
-            if (NotificationPermissionUtils.hasPermission(context)) {
-                dailyMotivationEnabled = true
-                savePref("daily_motivation", true)
-                MotivationScheduler.scheduleDailyMotivation(context)
-            } else {
-                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        } else {
+        if (!enabled) {
+            pendingDailyMotivation = false
             dailyMotivationEnabled = false
             savePref("daily_motivation", false)
             MotivationScheduler.cancelDailyMotivation(context)
+            return
+        }
+
+        pendingDailyMotivation = true
+        if (!NotificationPermissionUtils.hasPermission(context)) {
+            dailyMotivationNotificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (!UsageAccessManager.hasUsageAccess(context)) {
+            dailyMotivationUsageLauncher.launch(UsageAccessManager.usageAccessSettingsIntent())
+        } else {
+            usageAccessGranted = true
+            dailyMotivationEnabled = true
+            savePref("daily_motivation", true)
+            MotivationScheduler.scheduleDailyMotivation(context)
+            pendingDailyMotivation = false
         }
     }
     // endregion

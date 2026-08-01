@@ -34,10 +34,10 @@ class SocialScrollReminderWorker(
             if (activeSocialApp != null &&
                 SocialScrollReminderSettings.isReminderDue(applicationContext)
             ) {
-                NotificationHelper.showSocialScrollReminderNotification(
+                com.example.mindvault.ui.notifications.CustomNotificationBuilder.showQuoteNotification(
                     context = applicationContext,
-                    appName = activeSocialApp.appName,
-                    continuousUseMinutes = (activeSocialApp.continuousUseMillis / 60_000L).toInt()
+                    isStudySession = false, // Assuming false for general scroll detection, can be connected to FocusSessionManager later
+                    isScrolling = true
                 )
                 SocialScrollReminderSettings.recordReminderShown(applicationContext)
             }

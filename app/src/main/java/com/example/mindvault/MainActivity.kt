@@ -1,5 +1,6 @@
 package com.example.mindvault
 
+import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -73,6 +74,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mindvault.ui.theme.MindVaultTheme
 import com.example.mindvault.utils.AppManager
 import com.example.mindvault.utils.PermissionManager
+import com.example.mindvault.utils.UsageAccessManager
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -128,6 +130,31 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(isLoggedIn) {
                 if (!isLoggedIn) {
                     loginLauncher.launch(Intent(this@MainActivity, LoginActivity::class.java))
+                }
+            }
+
+            // First-time app launch permission requests
+            val startupPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission()
+            ) { _ ->
+                // Regardless of outcome for notifications, ask for Usage Access next if not granted
+                if (!UsageAccessManager.hasUsageAccess(context)) {
+                    context.startActivity(UsageAccessManager.usageAccessSettingsIntent())
+                }
+                prefs.edit().putBoolean("is_first_time", false).apply()
+            }
+            
+            LaunchedEffect(isFirstTime) {
+                if (isFirstTime) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        startupPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    } else {
+                        // Ask for Usage Access directly
+                        if (!UsageAccessManager.hasUsageAccess(context)) {
+                            context.startActivity(UsageAccessManager.usageAccessSettingsIntent())
+                        }
+                        prefs.edit().putBoolean("is_first_time", false).apply()
+                    }
                 }
             }
 
