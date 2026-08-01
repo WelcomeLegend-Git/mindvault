@@ -33,17 +33,7 @@ object CustomNotificationBuilder {
 
         val remoteViews = RemoteViews(context.packageName, R.layout.notification_quote_card)
 
-        // Adjust Title/Vibe tag color based on Scenario
-        val vibeColor = when (quoteResult.vibe) {
-            ScenarioVibe.HARSH_WAKEUP -> Color.parseColor("#EF4444") // Red
-            ScenarioVibe.ENCOURAGING -> Color.parseColor("#3B82F6")  // Blue
-            ScenarioVibe.MINDFUL_REFOCUS -> Color.parseColor("#00F2FE") // Cyan
-            ScenarioVibe.HIGH_ENERGY -> Color.parseColor("#F59E0B")  // Orange
-            ScenarioVibe.REFLECTIVE_WINDDOWN -> Color.parseColor("#A855F7") // Purple
-        }
 
-        remoteViews.setTextColor(R.id.tvVibeTag, vibeColor)
-        remoteViews.setTextViewText(R.id.tvVibeTag, quoteResult.vibe.name.replace("_", " "))
 
         // Create Text Bitmap using custom font
         val textBitmap = createCustomFontBitmap(context, quoteResult)

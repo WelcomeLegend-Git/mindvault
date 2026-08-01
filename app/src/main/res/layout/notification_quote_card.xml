@@ -3,48 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="#090B10"
     android:padding="16dp">
-
-    <!-- Header Section -->
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:paddingBottom="12dp">
-        
-        <ImageView
-            android:id="@+id/ivAppIcon"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
-            android:src="@mipmap/ic_launcher" />
-
-        <TextView
-            android:id="@+id/tvAppName"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:text="MindVault"
-            android:textColor="#94A3B8"
-            android:textSize="12sp"
-            android:textStyle="bold" />
-            
-        <TextView
-            android:id="@+id/tvVibeTag"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SCROLL ALERT"
-            android:textColor="#00F2FE"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:background="#1A00F2FE"
-            android:paddingStart="6dp"
-            android:paddingEnd="6dp"
-            android:paddingTop="2dp"
-            android:paddingBottom="2dp" />
-    </LinearLayout>
 
     <!-- The ImageView where our custom Font Bitmap will be injected -->
     <ImageView
