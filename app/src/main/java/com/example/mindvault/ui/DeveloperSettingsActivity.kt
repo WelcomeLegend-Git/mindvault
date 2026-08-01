@@ -137,6 +137,74 @@ fun DeveloperSettingsScreen(onBack: () -> Unit) {
                 }
             }
             
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "Permissions Testing",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF00F2FE),
+                modifier = Modifier.padding(bottom = 16.dp, start = 8.dp)
+            )
+
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+            ) { isGranted ->
+                if (isGranted) {
+                    android.widget.Toast.makeText(context, "Notification Permission Granted!", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp)
+                    .clickable {
+                        // 1. Request Notification Permission (Android 13+)
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                        
+                        // 2. Request Usage Access (for Doomscrolling)
+                        if (!com.example.mindvault.utils.UsageAccessManager.hasUsageAccess(context)) {
+                            context.startActivity(com.example.mindvault.utils.UsageAccessManager.usageAccessSettingsIntent())
+                        } else {
+                            android.widget.Toast.makeText(context, "Usage Access already granted!", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF00F2FE).copy(alpha = 0.1f)
+                )
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 2.dp,
+                            color = Color(0xFF00F2FE),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Grant Doomscroll Permissions",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Requests Notification & Usage Access (Required for Scroll Detection)",
+                            fontSize = 14.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+            
             Spacer(modifier = Modifier.height(40.dp))
         }
     }
