@@ -108,7 +108,7 @@ fun AboutScreen() {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "MindVault empowers high-performers to achieve deep focus and unparalleled productivity. Built with ultra-premium design and cutting-edge analytics, we help you understand, optimise and master your time.",
                     fontSize = 14.sp,
@@ -122,7 +122,7 @@ fun AboutScreen() {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "We do NOT collect personal data. All your focus sessions and statistics are stored securely on-device and (optionally) in your private cloud backup. Your data are always in your control.",
                     fontSize = 14.sp,
@@ -136,9 +136,11 @@ fun AboutScreen() {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
+                Spacer(modifier = Modifier.height(8.dp))
                 val features = listOf(
                     "Distraction-blocking Focus Mode with app-lock",
                     "Realtime streak & productivity analytics",
+                    "Smart Context-Aware Motivation Quotes",
                     "Hyper-premium glassmorphism UI",
                     "Achievements and gamified motivation",
                     "Fully offline – works even in airplane mode"
@@ -158,7 +160,7 @@ fun AboutScreen() {
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+                Spacer(modifier = Modifier.height(8.dp))
                 Text(
                     text = "MindVault is built with Jetpack Compose, Kotlin Coroutines, Coil and Firebase – all brilliant open-source projects maintained by their respective communities.",
                     fontSize = 14.sp,
@@ -167,7 +169,7 @@ fun AboutScreen() {
                 )
                 Spacer(modifier = Modifier.height(48.dp))
                 Text(
-                    text = "© 2025 MindVault Labs. All rights reserved.",
+                    text = "© 2026 MindVault Labs. All rights reserved.",
                     fontSize = 12.sp,
                     color = Color.White.copy(alpha = 0.5f),
                     textAlign = TextAlign.Center
