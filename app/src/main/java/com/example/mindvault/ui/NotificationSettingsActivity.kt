@@ -34,6 +34,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import com.example.mindvault.notifications.NotificationPermissionUtils
 import com.example.mindvault.notifications.MotivationScheduler
 import com.example.mindvault.notifications.FocusReminderScheduler
+import com.example.mindvault.notifications.SocialScrollReminderScheduler
+import com.example.mindvault.notifications.SocialScrollReminderSettings
+import com.example.mindvault.utils.UsageAccessManager
 
 class NotificationSettingsActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -67,10 +70,23 @@ fun NotificationSettingsScreen() {
     var focusEnabled by remember { mutableStateOf(prefs.getBoolean("focus", true)) }
     var motivationEnabled by remember { mutableStateOf(prefs.getBoolean("motivation", true)) }
     var dailyMotivationEnabled by remember { mutableStateOf(prefs.getBoolean("daily_motivation", false)) }
+    var socialScrollRemindersEnabled by remember {
+        mutableStateOf(SocialScrollReminderSettings.isEnabled(context))
+    }
+    var usageAccessGranted by remember {
+        mutableStateOf(UsageAccessManager.hasUsageAccess(context))
+    }
+    var pendingSocialScrollEnable by remember { mutableStateOf(false) }
 
     fun savePref(key: String, value: Boolean) {
         prefs.edit().putBoolean(key, value).apply()
     }
+    fun enableSocialScrollReminders() {
+        socialScrollRemindersEnabled = true
+        SocialScrollReminderSettings.setEnabled(context, true)
+        SocialScrollReminderScheduler.schedule(context)
+    }
+
 
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -84,6 +100,34 @@ fun NotificationSettingsScreen() {
             dailyMotivationEnabled = false
         }
     }
+    val usageAccessLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) {
+        usageAccessGranted = UsageAccessManager.hasUsageAccess(context)
+        if (pendingSocialScrollEnable && usageAccessGranted &&
+            NotificationPermissionUtils.hasPermission(context)
+        ) {
+            enableSocialScrollReminders()
+        }
+        pendingSocialScrollEnable = false
+    }
+
+    val socialScrollNotificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            usageAccessGranted = UsageAccessManager.hasUsageAccess(context)
+            if (usageAccessGranted) {
+                enableSocialScrollReminders()
+                pendingSocialScrollEnable = false
+            } else {
+                usageAccessLauncher.launch(UsageAccessManager.usageAccessSettingsIntent())
+            }
+        } else {
+            pendingSocialScrollEnable = false
+        }
+    }
+
 
     val motivationQuotes = remember { getMotivationQuotes() }
     val today = remember { LocalDate.now().toEpochDay() }
@@ -111,6 +155,27 @@ fun NotificationSettingsScreen() {
         motivationEnabled = enabled
         savePref("motivation", enabled)
     }
+    fun handleSocialScrollReminderChange(enabled: Boolean) {
+        if (!enabled) {
+            pendingSocialScrollEnable = false
+            socialScrollRemindersEnabled = false
+            SocialScrollReminderSettings.setEnabled(context, false)
+            SocialScrollReminderScheduler.cancel(context)
+            return
+        }
+
+        pendingSocialScrollEnable = true
+        if (!NotificationPermissionUtils.hasPermission(context)) {
+            socialScrollNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        } else if (!UsageAccessManager.hasUsageAccess(context)) {
+            usageAccessLauncher.launch(UsageAccessManager.usageAccessSettingsIntent())
+        } else {
+            usageAccessGranted = true
+            enableSocialScrollReminders()
+            pendingSocialScrollEnable = false
+        }
+    }
+
 
     fun handleDailyMotivationChange(enabled: Boolean) {
         if (enabled) {
@@ -205,6 +270,21 @@ fun NotificationSettingsScreen() {
                     subtitle = "Occasional motivational boosts.",
                     checked = motivationEnabled,
                     onCheckedChange = { handleMotivationChange(it) }
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
+            item {
+                PremiumNotificationToggle(
+                    icon = Icons.Filled.Timer,
+                    title = "Scroll Interruptions",
+                    subtitle = if (usageAccessGranted) {
+                        "A grounding reminder after about 15 minutes on social apps."
+                    } else {
+                        "Requires Usage access; only app name and time are checked."
+                    },
+                    checked = socialScrollRemindersEnabled,
+                    onCheckedChange = { handleSocialScrollReminderChange(it) }
                 )
                 Spacer(Modifier.height(16.dp))
             }

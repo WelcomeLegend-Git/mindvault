@@ -21,6 +21,10 @@ object NotificationHelper {
     const val CHANNEL_ACHIEVEMENT_ID = "achievement_unlocked"
     private const val CHANNEL_ACHIEVEMENT_NAME = "Achievements"
 
+    const val CHANNEL_SCROLL_REMINDERS_ID = "social_scroll_reminders"
+    private const val CHANNEL_SCROLL_REMINDERS_NAME = "Scroll Interruptions"
+    private const val SOCIAL_SCROLL_NOTIFICATION_ID = 3_001
+
     /**
      * Must be called once on application start to make sure channels exist.
      */
@@ -50,7 +54,38 @@ object NotificationHelper {
                 lightColor = Color.parseColor("#FFD700")
             }
             manager.createNotificationChannel(achievementChannel)
+
+            val scrollReminderChannel = NotificationChannel(
+                CHANNEL_SCROLL_REMINDERS_ID,
+                CHANNEL_SCROLL_REMINDERS_NAME,
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Gentle reminders after prolonged social-media use"
+                enableLights(true)
+                lightColor = Color.parseColor("#8F5CFF")
+            }
+            manager.createNotificationChannel(scrollReminderChannel)
         }
+    }
+
+    fun showSocialScrollReminderNotification(
+        context: Context,
+        appName: String,
+        continuousUseMinutes: Int
+    ) {
+        val message = "You have been on $appName for about $continuousUseMinutes minutes. " +
+            "Pause, take one breath, and choose what deserves the next few minutes."
+        val notification = NotificationCompat.Builder(context, CHANNEL_SCROLL_REMINDERS_ID)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("A quick pause")
+            .setContentText(message)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(message))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setColor(Color.parseColor("#8F5CFF"))
+            .setAutoCancel(true)
+            .build()
+
+        NotificationManagerCompat.from(context).notify(SOCIAL_SCROLL_NOTIFICATION_ID, notification)
     }
 
     fun showFocusReminderNotification(context: Context, message: String) {
