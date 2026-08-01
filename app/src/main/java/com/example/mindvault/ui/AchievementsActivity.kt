@@ -324,6 +324,7 @@ data class Achievement(
 )
 
 fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List<Achievement> {
+    val totalMinutes = userStats?.totalFocusMinutes ?: 0L
     val totalHours = userStats?.totalFocusHours ?: 0L
     val totalSessions = userStats?.totalSessions ?: 0
     val currentStreak = userStats?.currentStreak ?: 0
@@ -332,7 +333,8 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
     
     // Additional variables for premium achievements
     val totalXP = (totalSessions * 10) + (totalHours * 50).toInt() + (level * 100) // Calculated XP for now
-    val averageSessionLength = if (totalSessions > 0) totalHours.toFloat() / totalSessions else 0f
+    // averageSessionLength is already in minutes from StatisticsManager
+    val avgSessionMinutes = userStats?.averageSessionLength ?: 0L
     
     return listOf(
     // 🌟 FIRST STEPS CATEGORY (10 achievements)
@@ -352,7 +354,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Start,
         Color(0xFF4CAF50),
         25,
-        totalHours >= 0.017f
+        totalMinutes >= 1  // 1 minute of focus
     ),
     Achievement(
         "first_five",
@@ -372,7 +374,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.AccessTime,
         Color(0xFFFF9800),
         75,
-        totalHours >= 1
+        totalMinutes >= 60,
     ),
     Achievement(
         "newcomer",
@@ -417,7 +419,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Architecture,
         Color(0xFF795548),
         175,
-        totalHours >= 2
+        totalMinutes >= 120,
     ),
     Achievement(
         "dedication",
@@ -551,9 +553,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Schedule,
         Color(0xFF00BCD4),
         300,
-        totalHours >= 5,
-        if (totalHours < 5) totalHours / 5f else null,
-        if (totalHours < 5) "$totalHours / 5 hours" else null
+        totalMinutes >= 300,
+        if (totalMinutes < 300) totalMinutes / 300f else null,
+        if (totalMinutes < 300) "${totalMinutes / 60} / 5 hours" else null
     ),
     Achievement(
         "10_hours",
@@ -562,9 +564,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Schedule,
         Color(0xFF9C27B0),
         400,
-        totalHours >= 10,
-        if (totalHours < 10) totalHours / 10f else null,
-        if (totalHours < 10) "$totalHours / 10 hours" else null
+        totalMinutes >= 600,
+        if (totalMinutes < 600) totalMinutes / 600f else null,
+        if (totalMinutes < 600) "${totalMinutes / 60} / 10 hours" else null
     ),
     Achievement(
         "25_hours",
@@ -573,9 +575,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.AccessTime,
         Color(0xFF607D8B),
         600,
-        totalHours >= 25,
-        if (totalHours < 25) totalHours / 25f else null,
-        if (totalHours < 25) "$totalHours / 25 hours" else null
+        totalMinutes >= 1500,
+        if (totalMinutes < 1500) totalMinutes / 1500f else null,
+        if (totalMinutes < 1500) "${totalMinutes / 60} / 25 hours" else null
     ),
     Achievement(
         "50_hours",
@@ -584,9 +586,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Timer,
         Color(0xFF795548),
         800,
-        totalHours >= 50,
-        if (totalHours < 50) totalHours / 50f else null,
-        if (totalHours < 50) "$totalHours / 50 hours" else null
+        totalMinutes >= 3000,
+        if (totalMinutes < 3000) totalMinutes / 3000f else null,
+        if (totalMinutes < 3000) "${totalMinutes / 60} / 50 hours" else null
     ),
     Achievement(
         "master",
@@ -595,9 +597,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Psychology,
         Color(0xFFB71C1C),
         1000,
-        totalHours >= 100,
-        if (totalHours < 100) totalHours / 100f else null,
-        if (totalHours < 100) "$totalHours / 100 hours" else null
+        totalMinutes >= 6000,
+        if (totalMinutes < 6000) totalMinutes / 6000f else null,
+        if (totalMinutes < 6000) "${totalMinutes / 60} / 100 hours" else null
     ),
     Achievement(
         "200_hours",
@@ -606,9 +608,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.HourglassEmpty,
         Color(0xFF4CAF50),
         1500,
-        totalHours >= 200,
-        if (totalHours < 200) totalHours / 200f else null,
-        if (totalHours < 200) "$totalHours / 200 hours" else null
+        totalMinutes >= 12000,
+        if (totalMinutes < 12000) totalMinutes / 12000f else null,
+        if (totalMinutes < 12000) "${totalMinutes / 60} / 200 hours" else null
     ),
     Achievement(
         "365_hours",
@@ -617,9 +619,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.CalendarToday,
         Color(0xFFFF9800),
         2000,
-        totalHours >= 365,
-        if (totalHours < 365) totalHours / 365f else null,
-        if (totalHours < 365) "$totalHours / 365 hours" else null
+        totalMinutes >= 21900,
+        if (totalMinutes < 21900) totalMinutes / 21900f else null,
+        if (totalMinutes < 21900) "${totalMinutes / 60} / 365 hours" else null
     ),
     Achievement(
         "500_hours",
@@ -628,9 +630,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.AutoAwesome,
         Color(0xFF9C27B0),
         2500,
-        totalHours >= 500,
-        if (totalHours < 500) totalHours / 500f else null,
-        if (totalHours < 500) "$totalHours / 500 hours" else null
+        totalMinutes >= 30000,
+        if (totalMinutes < 30000) totalMinutes / 30000f else null,
+        if (totalMinutes < 30000) "${totalMinutes / 60} / 500 hours" else null
     ),
     Achievement(
         "750_hours",
@@ -639,9 +641,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Diamond,
         Color(0xFF673AB7),
         3000,
-        totalHours >= 750,
-        if (totalHours < 750) totalHours / 750f else null,
-        if (totalHours < 750) "$totalHours / 750 hours" else null
+        totalMinutes >= 45000,
+        if (totalMinutes < 45000) totalMinutes / 45000f else null,
+        if (totalMinutes < 45000) "${totalMinutes / 60} / 750 hours" else null
     ),
     Achievement(
         "1000_hours",
@@ -650,9 +652,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Stars,
         Color(0xFFFFD700),
         5000,
-        totalHours >= 1000,
-        if (totalHours < 1000) totalHours / 1000f else null,
-        if (totalHours < 1000) "$totalHours / 1000 hours" else null
+        totalMinutes >= 60000,
+        if (totalMinutes < 60000) totalMinutes / 60000f else null,
+        if (totalMinutes < 60000) "${totalMinutes / 60} / 1000 hours" else null
     ),
 
     // 🔥 STREAK LEGENDS (10 achievements)
@@ -975,7 +977,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.EmojiEvents,
         Color(0xFFD32F2F),
         600,
-        averageSessionLength >= 0.75f && totalSessions >= 20
+        avgSessionMinutes >= 45 && totalSessions >= 20
     ),
     Achievement(
         "mindful_minutes",
@@ -993,7 +995,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Grade,
         Color(0xFFF57C00),
         750,
-        averageSessionLength >= 1.0f && totalSessions >= 10
+        avgSessionMinutes >= 60 && totalSessions >= 10
     ),
     Achievement(
         "laser_focus",
@@ -1235,9 +1237,9 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.AccessTime,
         Color(0xFF1A237E),
         7500,
-        totalHours >= 2000,
-        if (totalHours < 2000) totalHours / 2000f else null,
-        if (totalHours < 2000) "$totalHours / 2000 hours" else null
+        totalMinutes >= 120000,
+        if (totalMinutes < 120000) totalMinutes / 120000f else null,
+        if (totalMinutes < 120000) "${totalMinutes / 60} / 2000 hours" else null
     ),
     Achievement(
         "session_deity",
@@ -1257,7 +1259,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Psychology,
         Color(0xFF00695C),
         8000,
-        totalSessions >= 1000 && totalHours >= 500 && longestStreak >= 100
+        totalSessions >= 1000 && totalMinutes >= 30000 && longestStreak >= 100
     ),
     Achievement(
         "zen_emperor",
@@ -1266,7 +1268,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.SelfImprovement,
         Color(0xFF1B5E20),
         10000,
-        level >= 50 && longestStreak >= 365 && totalHours >= 1000
+        level >= 50 && longestStreak >= 365 && totalMinutes >= 60000
     ),
     Achievement(
         "transcendent_mind",
@@ -1293,7 +1295,7 @@ fun generateAchievements(userStats: com.example.mindvault.data.UserStats?): List
         Icons.Default.Diamond,
         Color(0xFFFFD700),
         25000,
-        totalSessions >= 5000 && totalHours >= 2500 && level >= 100
+        totalSessions >= 5000 && totalMinutes >= 150000 && level >= 100
     )
 )
 }

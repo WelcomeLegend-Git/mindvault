@@ -49,6 +49,7 @@ data class WeeklyStats(
 
 data class UserStats(
     val totalFocusHours: Long,
+    val totalFocusMinutes: Long, // precise total in minutes (source of truth)
     val totalSessions: Int,
     val averageSessionLength: Long, // in minutes
     val currentStreak: Int,
@@ -81,8 +82,25 @@ object StatisticsManager {
     fun init(context: Context) {
         this.context = context.applicationContext
         this.prefs = context.getSharedPreferences("mindvault_stats", Context.MODE_PRIVATE)
+        migrateHoursToMinutes()
         loadStats()
         Log.d("StatisticsManager", "Statistics Manager initialized")
+    }
+
+    /**
+     * One-time migration: convert old "total_focus_hours" (Long hours) to
+     * "total_focus_minutes" (Long minutes) so sub-hour sessions are no longer lost.
+     */
+    private fun migrateHoursToMinutes() {
+        if (prefs.contains("total_focus_hours") && !prefs.contains("total_focus_minutes")) {
+            val oldHours = prefs.getLong("total_focus_hours", 0L)
+            val migratedMinutes = oldHours * 60
+            prefs.edit()
+                .putLong("total_focus_minutes", migratedMinutes)
+                .remove("total_focus_hours")
+                .apply()
+            Log.d("StatisticsManager", "Migrated total_focus_hours ($oldHours h) → total_focus_minutes ($migratedMinutes min)")
+        }
     }
     
     fun isInitialized(): Boolean {
@@ -208,9 +226,10 @@ object StatisticsManager {
     }
     
     private fun loadUserStats() {
-        val totalHours = prefs.getLong("total_focus_hours", 0L)
+        val totalMinutes = prefs.getLong("total_focus_minutes", 0L)
+        val totalHours = totalMinutes / 60
         val totalSessions = prefs.getInt("total_sessions", 0)
-        val avgSessionLength = if (totalSessions > 0) totalHours * 60 / totalSessions else 0L
+        val avgSessionLength = if (totalSessions > 0) totalMinutes / totalSessions else 0L
         val currentStreak = calculateCurrentStreak()
         val longestStreak = prefs.getInt("longest_streak", 0)
         val totalXp = prefs.getInt("experience_points", 0)
@@ -218,6 +237,7 @@ object StatisticsManager {
 
         _userStats.value = UserStats(
             totalFocusHours = totalHours,
+            totalFocusMinutes = totalMinutes,
             totalSessions = totalSessions,
             averageSessionLength = avgSessionLength,
             currentStreak = currentStreak,
@@ -235,8 +255,36 @@ object StatisticsManager {
     private fun loadCurrentSession() {
         val sessionJson = prefs.getString("current_session", null)
         if (sessionJson != null) {
-            // Parse JSON and restore session (simplified for this example)
-            // In a real app, you'd use proper JSON parsing
+            try {
+                val obj = org.json.JSONObject(sessionJson)
+                val session = FocusSessionRecord(
+                    id = obj.getString("id"),
+                    startTime = LocalDateTime.parse(obj.getString("startTime")),
+                    endTime = null,
+                    type = obj.getString("type"),
+                    blockedApps = mutableListOf<String>().apply {
+                        val arr = obj.optJSONArray("blockedApps")
+                        if (arr != null) {
+                            for (i in 0 until arr.length()) add(arr.getString(i))
+                        }
+                    },
+                    distractionCount = obj.optInt("distractionCount", 0),
+                    isCompleted = false
+                )
+                // Recover the orphaned session — end it now so the time isn't lost
+                val recovered = session.copy(
+                    endTime = LocalDateTime.now(),
+                    isCompleted = true
+                )
+                Log.d("StatisticsManager", "Recovering orphaned session ${recovered.id} from ${recovered.startTime}")
+                saveSessionRecord(recovered)
+                updateDailyStats(recovered)
+                updateUserStats(recovered)
+                clearCurrentSession()
+            } catch (e: Exception) {
+                Log.e("StatisticsManager", "Failed to restore session, clearing", e)
+                clearCurrentSession()
+            }
         }
     }
     
@@ -297,11 +345,10 @@ object StatisticsManager {
         
         val editor = prefs.edit()
         
-        // Update total hours with validation
-        val currentMinutes = prefs.getLong("total_focus_hours", 0L) * 60
-        val newTotalMinutes = currentMinutes + sessionDuration
-        val newTotalHours = (newTotalMinutes / 60).coerceAtMost(100000L) // Reasonable max
-        editor.putLong("total_focus_hours", newTotalHours)
+        // Update total focus minutes (precise, no rounding loss)
+        val currentMinutes = prefs.getLong("total_focus_minutes", 0L)
+        val newTotalMinutes = (currentMinutes + sessionDuration).coerceAtMost(6_000_000L) // Reasonable max
+        editor.putLong("total_focus_minutes", newTotalMinutes)
         
         // Update total sessions with validation
         val totalSessions = prefs.getInt("total_sessions", 0).coerceAtLeast(0)
@@ -396,29 +443,19 @@ object StatisticsManager {
         var streak = 0
         var date = LocalDate.now()
         
-        // Check today first
-        if (hadFocusOn(date)) {
-            streak++
+        // If today has no focus yet, allow the streak to continue from yesterday
+        // (the day isn't over yet). But if yesterday also has no focus, streak is 0.
+        if (!hadFocusOn(date)) {
             date = date.minusDays(1)
-        } else {
-            // If today is not done, check yesterday.
-            // If yesterday is done, streak continues from yesterday.
-            // If yesterday is NOT done, streak is broken (0).
-            if (hadFocusOn(date.minusDays(1))) {
-                date = date.minusDays(1)
-            } else {
-                return 0 // Streak broken
+            if (!hadFocusOn(date)) {
+                return 0
             }
         }
         
-        // Count backwards
-        while (true) {
-            if (hadFocusOn(date)) {
-                streak++
-                date = date.minusDays(1)
-            } else {
-                break
-            }
+        // Count consecutive days backward from `date`
+        while (hadFocusOn(date)) {
+            streak++
+            date = date.minusDays(1)
         }
         
         return streak
@@ -509,8 +546,19 @@ object StatisticsManager {
     }
     
     private fun saveCurrentSession(session: FocusSessionRecord) {
-        // Save current session to preferences (simplified)
-        prefs.edit().putString("current_session", session.id).apply()
+        try {
+            val obj = org.json.JSONObject()
+            obj.put("id", session.id)
+            obj.put("startTime", session.startTime.toString())
+            obj.put("type", session.type)
+            obj.put("distractionCount", session.distractionCount)
+            val blockedAppsArray = org.json.JSONArray()
+            session.blockedApps.forEach { blockedAppsArray.put(it) }
+            obj.put("blockedApps", blockedAppsArray)
+            prefs.edit().putString("current_session", obj.toString()).apply()
+        } catch (e: Exception) {
+            Log.e("StatisticsManager", "Failed to save current session", e)
+        }
     }
     
     private fun saveSessionRecord(session: FocusSessionRecord) {

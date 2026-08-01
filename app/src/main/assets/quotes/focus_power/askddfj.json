@@ -1,0 +1,902 @@
+[
+{
+"q": "You are in danger of living a life so comfortable and soft that you will die without ever realizing your true potential.",
+"a": "David Goggins",
+"cat": "tough_love",
+"tags": ["potential", "comfort", "reality-check"]
+},
+{
+"q": "Amateurs sit and wait for inspiration, the rest of us just get up and go to work.",
+"a": "Stephen King",
+"cat": "deep_work",
+"tags": ["action", "inspiration", "habits"]
+},
+{
+"q": "The master has failed more times than the beginner has even tried.",
+"a": "Stephen McCranie",
+"cat": "mastery",
+"tags": ["failure", "persistence", "growth"]
+},
+{
+"q": "Courage is not the absence of fear, but rather the assessment that something else is more important than fear.",
+"a": "Franklin D. Roosevelt",
+"cat": "courage",
+"tags": ["fear", "bravery", "priorities"]
+},
+{
+"q": "Don't stop when you are tired. Stop when you are done.",
+"a": "David Goggins",
+"cat": "tough_love",
+"tags": ["endurance", "grit", "completion"]
+},
+{
+"q": "Deep work is the superpower of the 21st century.",
+"a": "Cal Newport",
+"cat": "deep_work",
+"tags": ["focus", "advantage", "concentration"]
+},
+{
+"q": "Mastery is not a function of genius or talent. It is a function of time and intense focus applied to a particular field of knowledge.",
+"a": "Robert Greene",
+"cat": "mastery",
+"tags": ["time", "focus", "skill"]
+},
+{
+"q": "I learned that courage was not the absence of fear, but the triumph over it.",
+"a": "Nelson Mandela",
+"cat": "courage",
+"tags": ["triumph", "fear", "bravery"]
+},
+{
+"q": "Discipline equals freedom.",
+"a": "Jocko Willink",
+"cat": "tough_love",
+"tags": ["discipline", "freedom", "rules"]
+},
+{
+"q": "Concentrate all your thoughts upon the work in hand. The sun's rays do not burn until brought to a focus.",
+"a": "Alexander Graham Bell",
+"cat": "deep_work",
+"tags": ["concentration", "focus", "energy"]
+},
+{
+"q": "Patience is bitter, but its fruit is sweet.",
+"a": "Jean-Jacques Rousseau",
+"cat": "mastery",
+"tags": ["patience", "reward", "time"]
+},
+{
+"q": "He who is not courageous enough to take risks will accomplish nothing in life.",
+"a": "Muhammad Ali",
+"cat": "courage",
+"tags": ["risk", "accomplishment", "boldness"]
+},
+{
+"q": "There is no growth in the comfort zone.",
+"a": "Jocko Willink",
+"cat": "tough_love",
+"tags": ["growth", "discomfort", "challenge"]
+},
+{
+"q": "You do not rise to the level of your goals. You fall to the level of your systems.",
+"a": "James Clear",
+"cat": "deep_work",
+"tags": ["systems", "habits", "goals"]
+},
+{
+"q": "Give me six hours to chop down a tree and I will spend the first four sharpening the axe.",
+"a": "Abraham Lincoln",
+"cat": "mastery",
+"tags": ["preparation", "strategy", "craft"]
+},
+{
+"q": "Do one thing every day that scares you.",
+"a": "Eleanor Roosevelt",
+"cat": "courage",
+"tags": ["fear", "daily-habit", "boldness"]
+},
+{
+"q": "No one is going to come help you. No one is coming to save you.",
+"a": "",
+"cat": "tough_love",
+"tags": ["accountability", "independence", "truth"]
+},
+{
+"q": "Starve your distractions, feed your focus.",
+"a": "",
+"cat": "deep_work",
+"tags": ["distraction", "focus", "attention"]
+},
+{
+"q": "It takes 20 years to make an overnight success.",
+"a": "Eddie Cantor",
+"cat": "mastery",
+"tags": ["success", "patience", "grind"]
+},
+{
+"q": "Life shrinks or expands in proportion to one's courage.",
+"a": "Anais Nin",
+"cat": "courage",
+"tags": ["life", "bravery", "growth"]
+},
+{
+"q": "Excuses are lies wrapped up in reasons.",
+"a": "Howard Wright",
+"cat": "tough_love",
+"tags": ["excuses", "lies", "honesty"]
+},
+{
+"q": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+"a": "Will Durant",
+"cat": "deep_work",
+"tags": ["excellence", "habits", "consistency"]
+},
+{
+"q": "The bamboo that bends is stronger than the oak that resists.",
+"a": "Japanese Proverb",
+"cat": "mastery",
+"tags": ["flexibility", "strength", "resilience"]
+},
+{
+"q": "Fortune favors the bold.",
+"a": "Virgil",
+"cat": "courage",
+"tags": ["fortune", "boldness", "luck"]
+},
+{
+"q": "Do not complain about the results you did not get from the work you did not do.",
+"a": "",
+"cat": "tough_love",
+"tags": ["complaining", "work-ethic", "results"]
+},
+{
+"q": "To produce at your peak level you need to work for extended periods with full concentration on a single task free from distraction.",
+"a": "Cal Newport",
+"cat": "deep_work",
+"tags": ["peak-performance", "concentration", "isolation"]
+},
+{
+"q": "Knowing is not enough, we must apply. Willing is not enough, we must do.",
+"a": "Bruce Lee",
+"cat": "mastery",
+"tags": ["application", "action", "knowledge"]
+},
+{
+"q": "You can choose courage or you can choose comfort. You cannot have both.",
+"a": "Brené Brown",
+"cat": "courage",
+"tags": ["choice", "comfort", "vulnerability"]
+},
+{
+"q": "Stop waiting for Friday, for summer, for someone to fall in love with you, for life. Happiness is achieved when you stop waiting for it.",
+"a": "",
+"cat": "tough_love",
+"tags": ["waiting", "action", "happiness"]
+},
+{
+"q": "Multitasking is a myth. Focus on one thing and do it flawlessly.",
+"a": "",
+"cat": "deep_work",
+"tags": ["multitasking", "focus", "perfection"]
+},
+{
+"q": "Mastery is a process, not a destination.",
+"a": "",
+"cat": "mastery",
+"tags": ["process", "journey", "growth"]
+},
+{
+"q": "The cave you fear to enter holds the treasure you seek.",
+"a": "Joseph Campbell",
+"cat": "courage",
+"tags": ["fear", "treasure", "unknown"]
+},
+{
+"q": "You could be good today, but instead you choose tomorrow.",
+"a": "Marcus Aurelius",
+"cat": "tough_love",
+"tags": ["procrastination", "stoicism", "now"]
+},
+{
+"q": "Motivation gets you going, but discipline keeps you growing.",
+"a": "John C. Maxwell",
+"cat": "deep_work",
+"tags": ["motivation", "discipline", "growth"]
+},
+{
+"q": "The future belongs to those who learn more skills and combine them in creative ways.",
+"a": "Robert Greene",
+"cat": "mastery",
+"tags": ["skills", "creativity", "future"]
+},
+{
+"q": "Courage is being scared to death, but saddling up anyway.",
+"a": "John Wayne",
+"cat": "courage",
+"tags": ["fear", "action", "grit"]
+},
+{
+"q": "The only difference between who you are and who you want to be is what you do.",
+"a": "",
+"cat": "tough_love",
+"tags": ["identity", "action", "change"]
+},
+{
+"q": "Intensity of focus is what separates the masters from the amateurs.",
+"a": "",
+"cat": "deep_work",
+"tags": ["intensity", "focus", "mastery"]
+},
+{
+"q": "Every master was once a disaster.",
+"a": "T. Harv Eker",
+"cat": "mastery",
+"tags": ["beginnings", "failure", "hope"]
+},
+{
+"q": "It takes courage to grow up and become who you really are.",
+"a": "E.E. Cummings",
+"cat": "courage",
+"tags": ["authenticity", "growth", "identity"]
+},
+{
+"q": "Your mind will quit a thousand times before your body will.",
+"a": "",
+"cat": "tough_love",
+"tags": ["mindset", "endurance", "limits"]
+},
+{
+"q": "Focus is a muscle, and you must build it every single day.",
+"a": "",
+"cat": "deep_work",
+"tags": ["focus", "training", "daily"]
+},
+{
+"q": "The impediment to action advances action. What stands in the way becomes the way.",
+"a": "Marcus Aurelius",
+"cat": "mastery",
+"tags": ["obstacles", "stoicism", "resilience"]
+},
+{
+"q": "A ship in harbor is safe, but that is not what ships are built for.",
+"a": "John A. Shedd",
+"cat": "courage",
+"tags": ["safety", "risk", "purpose"]
+},
+{
+"q": "If it is important to you, you will find a way. If not, you will find an excuse.",
+"a": "Ryan Blair",
+"cat": "tough_love",
+"tags": ["excuses", "priorities", "determination"]
+},
+{
+"q": "The successful warrior is the average man, with laser-like focus.",
+"a": "Bruce Lee",
+"cat": "deep_work",
+"tags": ["warrior", "focus", "average"]
+},
+{
+"q": "I fear not the man who has practiced 10,000 kicks once, but I fear the man who has practiced one kick 10,000 times.",
+"a": "Bruce Lee",
+"cat": "mastery",
+"tags": ["practice", "repetition", "focus"]
+},
+{
+"q": "Fear is a reaction. Courage is a decision.",
+"a": "Winston Churchill",
+"cat": "courage",
+"tags": ["decision", "fear", "mindset"]
+},
+{
+"q": "Suffer the pain of discipline or suffer the pain of regret.",
+"a": "Jim Rohn",
+"cat": "tough_love",
+"tags": ["discipline", "regret", "pain"]
+},
+{
+"q": "First forget inspiration. Habit is more dependable. Habit will sustain you whether you're inspired or not.",
+"a": "Octavia Butler",
+"cat": "deep_work",
+"tags": ["habits", "dependability", "writing"]
+},
+{
+"q": "Mastery is the highest form of self-expression.",
+"a": "",
+"cat": "mastery",
+"tags": ["self-expression", "art", "dedication"]
+},
+{
+"q": "To dare is to lose one's footing momentarily. Not to dare is to lose oneself.",
+"a": "Søren Kierkegaard",
+"cat": "courage",
+"tags": ["daring", "loss", "boldness"]
+},
+{
+"q": "You have to be willing to be misunderstood if you are going to be successful.",
+"a": "",
+"cat": "tough_love",
+"tags": ["misunderstood", "success", "judgment"]
+},
+{
+"q": "Success is the sum of small efforts, repeated day in and day out.",
+"a": "Robert Collier",
+"cat": "deep_work",
+"tags": ["consistency", "effort", "repetition"]
+},
+{
+"q": "You cannot rush the process of becoming world-class.",
+"a": "",
+"cat": "mastery",
+"tags": ["patience", "world-class", "process"]
+},
+{
+"q": "Everything you have ever wanted is on the other side of fear.",
+"a": "George Addair",
+"cat": "courage",
+"tags": ["desire", "fear", "barrier"]
+},
+{
+"q": "Wake up early. Drink water. Work hard. Ambition is nothing without execution.",
+"a": "",
+"cat": "tough_love",
+"tags": ["execution", "ambition", "basics"]
+},
+{
+"q": "Work expands so as to fill the time available for its completion.",
+"a": "Cyril Northcote Parkinson",
+"cat": "deep_work",
+"tags": ["time-management", "efficiency", "parkinsons-law"]
+},
+{
+"q": "Slow down to speed up. The foundation must be unshakeable.",
+"a": "",
+"cat": "mastery",
+"tags": ["foundation", "speed", "patience"]
+},
+{
+"q": "Leap, and the net will appear.",
+"a": "John Burroughs",
+"cat": "courage",
+"tags": ["faith", "leap", "trust"]
+},
+{
+"q": "Nobody cares about your excuses. Nobody pities you for procrastinating.",
+"a": "",
+"cat": "tough_love",
+"tags": ["excuses", "pity", "harsh-truth"]
+},
+{
+"q": "Productivity is never an accident. It is always the result of a commitment to excellence, intelligent planning, and focused effort.",
+"a": "Paul J. Meyer",
+"cat": "deep_work",
+"tags": ["productivity", "planning", "effort"]
+},
+{
+"q": "Fall in love with the boredom of repetition.",
+"a": "",
+"cat": "mastery",
+"tags": ["boredom", "repetition", "love"]
+},
+{
+"q": "Do not be afraid to give up the good to go for the great.",
+"a": "John D. Rockefeller",
+"cat": "courage",
+"tags": ["sacrifice", "greatness", "ambition"]
+},
+{
+"q": "Some people want it to happen, some wish it would happen, others make it happen.",
+"a": "Michael Jordan",
+"cat": "tough_love",
+"tags": ["action", "wishing", "making-it-happen"]
+},
+{
+"q": "Do not confuse motion and progress. A rocking horse keeps moving but does not make any progress.",
+"a": "Alfred A. Montapert",
+"cat": "deep_work",
+"tags": ["motion", "progress", "efficiency"]
+},
+{
+"q": "Excellence is the gradual result of always striving to do better.",
+"a": "Pat Riley",
+"cat": "mastery",
+"tags": ["excellence", "striving", "gradual"]
+},
+{
+"q": "Sometimes all you need is twenty seconds of insane courage.",
+"a": "Benjamin Mee",
+"cat": "courage",
+"tags": ["seconds", "insane", "bravery"]
+},
+{
+"q": "A year from now you will wish you had started today.",
+"a": "Karen Lamb",
+"cat": "tough_love",
+"tags": ["starting", "regret", "time"]
+},
+{
+"q": "Lack of direction, not lack of time, is the problem. We all have twenty-four hour days.",
+"a": "Zig Ziglar",
+"cat": "deep_work",
+"tags": ["direction", "time", "equality"]
+},
+{
+"q": "We are what we repeatedly do.",
+"a": "Aristotle",
+"cat": "mastery",
+"tags": ["repetition", "identity", "habits"]
+},
+{
+"q": "Bravery is not a quality of the body. It is of the soul.",
+"a": "Mahatma Gandhi",
+"cat": "courage",
+"tags": ["bravery", "soul", "inner-strength"]
+},
+{
+"q": "Don't let your feelings dictate your actions. Let your actions dictate your feelings.",
+"a": "",
+"cat": "tough_love",
+"tags": ["feelings", "actions", "control"]
+},
+{
+"q": "Focus on being productive instead of busy.",
+"a": "Tim Ferriss",
+"cat": "deep_work",
+"tags": ["productive", "busy", "efficiency"]
+},
+{
+"q": "Great works are performed not by strength but by perseverance.",
+"a": "Samuel Johnson",
+"cat": "mastery",
+"tags": ["perseverance", "strength", "greatness"]
+},
+{
+"q": "The only limit to our realization of tomorrow will be our doubts of today.",
+"a": "Franklin D. Roosevelt",
+"cat": "courage",
+"tags": ["doubts", "limits", "tomorrow"]
+},
+{
+"q": "You are what you do, not what you say you will do.",
+"a": "Carl Jung",
+"cat": "tough_love",
+"tags": ["action", "words", "integrity"]
+},
+{
+"q": "The shorter way to do many things is to only do one thing at a time.",
+"a": "Mozart",
+"cat": "deep_work",
+"tags": ["single-tasking", "speed", "simplicity"]
+},
+{
+"q": "The expert in anything was once a beginner.",
+"a": "Helen Hayes",
+"cat": "mastery",
+"tags": ["expert", "beginner", "journey"]
+},
+{
+"q": "Start before you are ready.",
+"a": "Steven Pressfield",
+"cat": "courage",
+"tags": ["starting", "readiness", "action"]
+},
+{
+"q": "Quit being so soft and expecting the world to hand you anything.",
+"a": "",
+"cat": "tough_love",
+"tags": ["entitlement", "softness", "reality"]
+},
+{
+"q": "Where your attention goes, your time goes.",
+"a": "Idowu Koyenikan",
+"cat": "deep_work",
+"tags": ["attention", "time", "focus"]
+},
+{
+"q": "Long-term consistency trumps short-term intensity.",
+"a": "Bruce Lee",
+"cat": "mastery",
+"tags": ["consistency", "intensity", "long-term"]
+},
+{
+"q": "Speak your mind, even if your voice shakes.",
+"a": "Maggie Kuhn",
+"cat": "courage",
+"tags": ["speaking-up", "voice", "fear"]
+},
+{
+"q": "The world does not care about your potential. It only rewards your execution.",
+"a": "",
+"cat": "tough_love",
+"tags": ["potential", "execution", "results"]
+},
+{
+"q": "Create an environment where doing the right thing is the easiest thing.",
+"a": "",
+"cat": "deep_work",
+"tags": ["environment", "ease", "habits"]
+},
+{
+"q": "Learn the rules like a pro, so you can break them like an artist.",
+"a": "Pablo Picasso",
+"cat": "mastery",
+"tags": ["rules", "art", "rebellion"]
+},
+{
+"q": "It is hard to fail, but it is worse never to have tried to succeed.",
+"a": "Theodore Roosevelt",
+"cat": "courage",
+"tags": ["failure", "trying", "regret"]
+},
+{
+"q": "Tough times never last, but tough people do.",
+"a": "Robert H. Schuller",
+"cat": "tough_love",
+"tags": ["resilience", "toughness", "survival"]
+},
+{
+"q": "Action is the foundational key to all success.",
+"a": "Pablo Picasso",
+"cat": "deep_work",
+"tags": ["action", "foundation", "success"]
+},
+{
+"q": "Art is never finished, only abandoned.",
+"a": "Leonardo da Vinci",
+"cat": "mastery",
+"tags": ["art", "perfection", "completion"]
+},
+{
+"q": "Stand your ground. Don't fire unless fired upon, but if they mean to have a war, let it begin here.",
+"a": "John Parker",
+"cat": "courage",
+"tags": ["stand", "ground", "conflict"]
+},
+{
+"q": "Be stronger than your strongest excuse.",
+"a": "",
+"cat": "tough_love",
+"tags": ["strength", "excuses", "willpower"]
+},
+{
+"q": "Great acts are made up of small deeds.",
+"a": "Lao Tzu",
+"cat": "deep_work",
+"tags": ["greatness", "small-deeds", "accumulation"]
+},
+{
+"q": "Genius is one percent inspiration and ninety-nine percent perspiration.",
+"a": "Thomas Edison",
+"cat": "mastery",
+"tags": ["genius", "perspiration", "hard-work"]
+},
+{
+"q": "Only those who will risk going too far can possibly find out how far one can go.",
+"a": "T.S. Eliot",
+"cat": "courage",
+"tags": ["risk", "limits", "discovery"]
+},
+{
+"q": "Get up. Dust yourself off. And stop feeling sorry for yourself.",
+"a": "",
+"cat": "tough_love",
+"tags": ["pity", "resilience", "moving-on"]
+},
+{
+"q": "Concentration is the secret of strength in politics, in war, in trade, in short in all management of human affairs.",
+"a": "Ralph Waldo Emerson",
+"cat": "deep_work",
+"tags": ["concentration", "strength", "management"]
+},
+{
+"q": "Only one who devotes himself to a cause with his whole strength and soul can be a true master.",
+"a": "Albert Einstein",
+"cat": "mastery",
+"tags": ["devotion", "soul", "dedication"]
+},
+{
+"q": "Do what you feel in your heart to be right, for you will be criticized anyway.",
+"a": "Eleanor Roosevelt",
+"cat": "courage",
+"tags": ["criticism", "heart", "authenticity"]
+},
+{
+"q": "Success is what happens after you have survived all your mistakes.",
+"a": "Anora Lee",
+"cat": "tough_love",
+"tags": ["mistakes", "survival", "success"]
+},
+{
+"q": "Deep work is not some nostalgic affectation of writers and early-twentieth-century scientists. It is a necessary skill for anyone who wants to move ahead globally.",
+"a": "Cal Newport",
+"cat": "deep_work",
+"tags": ["skill", "necessity", "future"]
+},
+{
+"q": "Continuous improvement is better than delayed perfection.",
+"a": "Mark Twain",
+"cat": "mastery",
+"tags": ["improvement", "perfection", "progress"]
+},
+{
+"q": "Believe you can and you are halfway there.",
+"a": "Theodore Roosevelt",
+"cat": "courage",
+"tags": ["belief", "halfway", "confidence"]
+},
+{
+"q": "Stop negotiating with yourself. Do the work.",
+"a": "",
+"cat": "tough_love",
+"tags": ["negotiation", "work", "discipline"]
+},
+{
+"q": "Habit is the daily battleground of character.",
+"a": "Dan Coats",
+"cat": "deep_work",
+"tags": ["habit", "character", "battleground"]
+},
+{
+"q": "If people knew how hard I worked to get my mastery, it would not seem so wonderful at all.",
+"a": "Michelangelo",
+"cat": "mastery",
+"tags": ["hard-work", "illusion", "effort"]
+},
+{
+"q": "Action cures fear, inaction creates terror.",
+"a": "Douglas Horton",
+"cat": "courage",
+"tags": ["action", "fear", "terror"]
+},
+{
+"q": "You lack discipline, not motivation.",
+"a": "",
+"cat": "tough_love",
+"tags": ["discipline", "motivation", "truth"]
+},
+{
+"q": "There is no substitute for hard work.",
+"a": "Thomas Edison",
+"cat": "deep_work",
+"tags": ["hard-work", "substitute", "grind"]
+},
+{
+"q": "Iron rusts from disuse, stagnant water loses its purity; even so does inaction sap the vigor of the mind.",
+"a": "Leonardo da Vinci",
+"cat": "mastery",
+"tags": ["inaction", "vigor", "mind"]
+},
+{
+"q": "The brave man is not he who does not feel afraid, but he who conquers that fear.",
+"a": "Nelson Mandela",
+"cat": "courage",
+"tags": ["bravery", "conquest", "fear"]
+},
+{
+"q": "Stop running from the hard work. It is the only thing that will save you.",
+"a": "",
+"cat": "tough_love",
+"tags": ["running", "hard-work", "salvation"]
+},
+{
+"q": "It is not that I am so smart, it is just that I stay with problems longer.",
+"a": "Albert Einstein",
+"cat": "deep_work",
+"tags": ["persistence", "problems", "smart"]
+},
+{
+"q": "Delaying gratification is a supreme sign of emotional intelligence.",
+"a": "Daniel Goleman",
+"cat": "mastery",
+"tags": ["gratification", "intelligence", "delay"]
+},
+{
+"q": "Whenever you see a successful business, someone once made a courageous decision.",
+"a": "Peter Drucker",
+"cat": "courage",
+"tags": ["business", "decision", "success"]
+},
+{
+"q": "Dreams without goals are just dreams, and they ultimately fuel disappointment.",
+"a": "Denzel Washington",
+"cat": "tough_love",
+"tags": ["dreams", "goals", "disappointment"]
+},
+{
+"q": "Distractions destroy action. If it is not moving you towards your purpose, leave it alone.",
+"a": "Jermaine Riley",
+"cat": "deep_work",
+"tags": ["distractions", "purpose", "action"]
+},
+{
+"q": "Focus on the process, not the outcome.",
+"a": "",
+"cat": "mastery",
+"tags": ["process", "outcome", "focus"]
+},
+{
+"q": "If you aren't in over your head, how do you know how tall you are?",
+"a": "T.S. Eliot",
+"cat": "courage",
+"tags": ["depth", "challenge", "height"]
+},
+{
+"q": "You are 100 percent responsible for your life. Stop whining and do something about it.",
+"a": "",
+"cat": "tough_love",
+"tags": ["responsibility", "whining", "action"]
+},
+{
+"q": "Greatness is predictability in the mundane.",
+"a": "",
+"cat": "deep_work",
+"tags": ["greatness", "mundane", "predictability"]
+},
+{
+"q": "Mastery requires endurance. Endurance requires purpose.",
+"a": "",
+"cat": "mastery",
+"tags": ["endurance", "purpose", "stamina"]
+},
+{
+"q": "Discomfort is the currency of your dreams.",
+"a": "",
+"cat": "courage",
+"tags": ["discomfort", "currency", "dreams"]
+},
+{
+"q": "The hard days are what make you a champion.",
+"a": "Aly Raisman",
+"cat": "tough_love",
+"tags": ["hard-days", "champion", "struggle"]
+},
+{
+"q": "Show up every day. Consistency is the mother of mastery.",
+"a": "",
+"cat": "deep_work",
+"tags": ["consistency", "daily", "mastery"]
+},
+{
+"q": "The craftsman knows that perfection is an illusion, but excellence is a choice.",
+"a": "",
+"cat": "mastery",
+"tags": ["craftsman", "perfection", "excellence"]
+},
+{
+"q": "Courage starts with showing up and letting ourselves be seen.",
+"a": "Brené Brown",
+"cat": "courage",
+"tags": ["visibility", "showing-up", "vulnerability"]
+},
+{
+"q": "If you want to be a lion, you must train with lions.",
+"a": "Carlson Gracie",
+"cat": "tough_love",
+"tags": ["environment", "lions", "training"]
+},
+{
+"q": "Keep your eye on the task, not on the clock.",
+"a": "",
+"cat": "deep_work",
+"tags": ["task", "clock", "focus"]
+},
+{
+"q": "You don't have to be great to start, but you have to start to be great.",
+"a": "Zig Ziglar",
+"cat": "mastery",
+"tags": ["starting", "greatness", "action"]
+},
+{
+"q": "Risk more than others think is safe. Dream more than others think is practical.",
+"a": "Howard Schultz",
+"cat": "courage",
+"tags": ["risk", "safety", "dreams"]
+},
+{
+"q": "Hard work beats talent when talent fails to work hard.",
+"a": "Kevin Durant",
+"cat": "tough_love",
+"tags": ["hard-work", "talent", "competition"]
+},
+{
+"q": "Put your phone away and build the life you want.",
+"a": "",
+"cat": "deep_work",
+"tags": ["phone", "building", "distraction"]
+},
+{
+"q": "Study the greats and become greater.",
+"a": "Michael Jackson",
+"cat": "mastery",
+"tags": ["study", "greats", "learning"]
+},
+{
+"q": "Take the first step in faith. You don't have to see the whole staircase, just take the first step.",
+"a": "Martin Luther King Jr.",
+"cat": "courage",
+"tags": ["faith", "first-step", "trust"]
+},
+{
+"q": "The cost of procrastination is the life you could have lived.",
+"a": "",
+"cat": "tough_love",
+"tags": ["procrastination", "cost", "life"]
+},
+{
+"q": "Flow is found in the quiet persistence of single-tasking.",
+"a": "",
+"cat": "deep_work",
+"tags": ["flow", "persistence", "single-tasking"]
+},
+{
+"q": "True mastery transcends technique.",
+"a": "",
+"cat": "mastery",
+"tags": ["transcendence", "technique", "art"]
+},
+{
+"q": "Be bold, and mighty forces will come to your aid.",
+"a": "Basil King",
+"cat": "courage",
+"tags": ["boldness", "forces", "aid"]
+},
+{
+"q": "No alarms, no snooze buttons. Just you and your burning desire to succeed.",
+"a": "",
+"cat": "tough_love",
+"tags": ["desire", "waking-up", "drive"]
+},
+{
+"q": "The mind at work is the mind at peace.",
+"a": "",
+"cat": "deep_work",
+"tags": ["mind", "peace", "work"]
+},
+{
+"q": "Seek not to be a master, but a perpetual student.",
+"a": "",
+"cat": "mastery",
+"tags": ["student", "humility", "learning"]
+},
+{
+"q": "Courage is resistance to fear, mastery of fear, not absence of fear.",
+"a": "Mark Twain",
+"cat": "courage",
+"tags": ["resistance", "mastery", "fear"]
+},
+{
+"q": "Everything you want is on the other side of hard work.",
+"a": "",
+"cat": "tough_love",
+"tags": ["hard-work", "desire", "barrier"]
+},
+{
+"q": "Discipline is doing what you hate to do, but doing it like you love it.",
+"a": "Mike Tyson",
+"cat": "deep_work",
+"tags": ["discipline", "hate", "love"]
+},
+{
+"q": "Time is the greatest filter. Only true craft survives it.",
+"a": "",
+"cat": "mastery",
+"tags": ["time", "filter", "craft"]
+},
+{
+"q": "Above all, be the heroine of your life, not the victim.",
+"a": "Nora Ephron",
+"cat": "courage",
+"tags": ["heroine", "victim", "empowerment"]
+},
+{
+"q": "Stop acting like you live twice.",
+"a": "",
+"cat": "tough_love",
+"tags": ["mortality", "urgency", "time"]
+},
+{
+"q": "Solitude is the school of genius.",
+"a": "Edward Gibbon",
+"cat": "deep_work",
+"tags": ["solitude", "genius", "isolation"]
+}
+]

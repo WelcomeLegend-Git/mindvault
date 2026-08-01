@@ -43,7 +43,6 @@ class AppBlockedActivity : ComponentActivity() {
         window.addFlags(
             WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD or
-            WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or
             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
         )
@@ -98,8 +97,6 @@ class AppBlockedActivity : ComponentActivity() {
     
     override fun onResume() {
         super.onResume()
-        // Make sure this activity stays on top
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }
 

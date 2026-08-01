@@ -1,0 +1,404 @@
+[
+  {
+    "q": "Comfort is expensive when it costs you your potential.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["comfort", "potential", "ambition"]
+  },
+  {
+    "q": "Your future is being built by the things you keep postponing.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["future", "procrastination", "action"]
+  },
+  {
+    "q": "Nobody is coming to rescue the version of you that refuses to move.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["responsibility", "action", "selfreliance"]
+  },
+  {
+    "q": "A plan without work is just a prettier excuse.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["planning", "work", "excuses"]
+  },
+  {
+    "q": "Every excuse protects a weakness you are unwilling to train.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["excuses", "training", "weakness"]
+  },
+  {
+    "q": "Waiting to feel ready is how dreams become museum pieces.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["readiness", "dreams", "action"]
+  },
+  {
+    "q": "The work does not care how inspired you feel.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["work", "discipline", "consistency"]
+  },
+  {
+    "q": "Stop negotiating with the task. Start doing it.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["action", "discipline", "execution"]
+  },
+  {
+    "q": "A weak morning often begins with a weak promise kept the night before.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["morning", "promises", "discipline"]
+  },
+  {
+    "q": "You cannot outperform standards you refuse to set.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["standards", "performance", "growth"]
+  },
+  {
+    "q": "The mirror has no interest in your intentions.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["results", "honesty", "accountability"]
+  },
+  {
+    "q": "Small acts of avoidance become large debts.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["avoidance", "consequences", "action"]
+  },
+  {
+    "q": "No one owes your potential a standing ovation.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["potential", "work", "humility"]
+  },
+  {
+    "q": "You are allowed to be tired, not entitled to quit.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["fatigue", "persistence", "grit"]
+  },
+  {
+    "q": "Make your excuses compete with your results.",
+    "a": "",
+    "cat": "tough_love",
+    "tags": ["results", "excuses", "accountability"]
+  },
+  {
+    "q": "You will never reach your destination if you stop and throw stones at every dog that barks.",
+    "a": "Winston Churchill",
+    "cat": "deep_work",
+    "tags": ["focus", "distractions", "progress"]
+  },
+  {
+    "q": "Amateurs sit and wait for inspiration; the rest of us just get up and go to work.",
+    "a": "Stephen King",
+    "cat": "deep_work",
+    "tags": ["work", "inspiration", "discipline"]
+  },
+  {
+    "q": "By concentration, I can make a thing grow.",
+    "a": "Haruki Murakami",
+    "cat": "deep_work",
+    "tags": ["concentration", "creation", "patience"]
+  },
+  {
+    "q": "Protect the first hour of your work from other people's priorities.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["boundaries", "work", "focus"]
+  },
+  {
+    "q": "One uninterrupted hour can change more than a week of scattered effort.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["deepwork", "attention", "results"]
+  },
+  {
+    "q": "Focus is a decision repeated whenever distraction arrives.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["focus", "distractions", "discipline"]
+  },
+  {
+    "q": "The task gets lighter when you stop carrying ten others in your mind.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["attention", "simplicity", "mindset"]
+  },
+  {
+    "q": "Guard your concentration like it is part of the project, because it is.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["concentration", "projects", "boundaries"]
+  },
+  {
+    "q": "Do not make every day a referendum on whether you feel like working.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["discipline", "routine", "work"]
+  },
+  {
+    "q": "The phone is rarely the break; it is usually the escape.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["phone", "distractions", "focus"]
+  },
+  {
+    "q": "Your best ideas need silence long enough to introduce themselves.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["silence", "ideas", "thinking"]
+  },
+  {
+    "q": "Finish a meaningful block of work before you consume the world's noise.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["work", "noise", "priorities"]
+  },
+  {
+    "q": "Make boredom available. It is where attention learns to stay.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["boredom", "attention", "patience"]
+  },
+  {
+    "q": "A distraction delayed is a distraction weakened.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["distractions", "delay", "control"]
+  },
+  {
+    "q": "Work in a way that leaves evidence when the day is over.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["output", "work", "results"]
+  },
+  {
+    "q": "Depth is built one defended minute at a time.",
+    "a": "",
+    "cat": "deep_work",
+    "tags": ["depth", "minutes", "focus"]
+  },
+  {
+    "q": "Mastery is the quiet accumulation of ordinary sessions.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["mastery", "practice", "consistency"]
+  },
+  {
+    "q": "Stay long enough for the basics to become instinct.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["basics", "instinct", "patience"]
+  },
+  {
+    "q": "A decade of modest daily effort defeats a month of heroic effort.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["longterm", "daily", "effort"]
+  },
+  {
+    "q": "The craft rewards those who return after the novelty fades.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["craft", "commitment", "patience"]
+  },
+  {
+    "q": "You cannot rush the part of you that is still learning to see.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["learning", "patience", "perception"]
+  },
+  {
+    "q": "Progress becomes visible only after it has been invisible for a while.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["progress", "patience", "consistency"]
+  },
+  {
+    "q": "Practice is not preparation for the real thing; it is the real thing.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["practice", "reality", "craft"]
+  },
+  {
+    "q": "The goal is not to impress early. The goal is to improve for a long time.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["improvement", "longterm", "humility"]
+  },
+  {
+    "q": "Your early work is supposed to look like early work.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["beginner", "learning", "patience"]
+  },
+  {
+    "q": "A good apprentice notices what the master no longer needs to explain.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["apprentice", "observation", "learning"]
+  },
+  {
+    "q": "Refinement comes after repetition, never before it.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["refinement", "repetition", "process"]
+  },
+  {
+    "q": "Compounding begins when you stop restarting.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["compounding", "consistency", "momentum"]
+  },
+  {
+    "q": "Make peace with being unknown while becoming undeniable.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["patience", "reputation", "craft"]
+  },
+  {
+    "q": "The long game is won in the days nobody applauds.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["longterm", "discipline", "effort"]
+  },
+  {
+    "q": "Study the fundamentals until they can carry you under pressure.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["fundamentals", "pressure", "skill"]
+  },
+  {
+    "q": "The most durable confidence comes from kept practice promises.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["confidence", "practice", "promises"]
+  },
+  {
+    "q": "Do not count sessions only by how they felt; count them by what they taught.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["sessions", "learning", "reflection"]
+  },
+  {
+    "q": "Become patient enough to let quality catch up with ambition.",
+    "a": "",
+    "cat": "mastery",
+    "tags": ["quality", "ambition", "patience"]
+  },
+  {
+    "q": "The cave you fear to enter holds the treasure you seek.",
+    "a": "Joseph Campbell",
+    "cat": "courage",
+    "tags": ["fear", "treasure", "growth"]
+  },
+  {
+    "q": "Bravery is action taken while fear is still in the room.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["bravery", "fear", "action"]
+  },
+  {
+    "q": "Your first imperfect step is more courageous than your hundredth private plan.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["start", "imperfection", "courage"]
+  },
+  {
+    "q": "Speak before your voice feels steady.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["voice", "speaking", "bravery"]
+  },
+  {
+    "q": "Courage often looks like being willing to be misunderstood.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["courage", "misunderstood", "integrity"]
+  },
+  {
+    "q": "The risk of embarrassment is smaller than the cost of silence.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["embarrassment", "silence", "speaking"]
+  },
+  {
+    "q": "You do not need permission to begin becoming who you are.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["permission", "identity", "begin"]
+  },
+  {
+    "q": "A difficult conversation delayed becomes a heavier one.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["conversation", "honesty", "action"]
+  },
+  {
+    "q": "Let fear give you information, not instructions.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["fear", "judgment", "control"]
+  },
+  {
+    "q": "Being new is not a reason to remain unseen.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["beginner", "visibility", "confidence"]
+  },
+  {
+    "q": "Rejection is proof that you made yourself available to possibility.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["rejection", "possibility", "risk"]
+  },
+  {
+    "q": "Sometimes courage is simply refusing to abandon yourself.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["selfrespect", "courage", "boundaries"]
+  },
+  {
+    "q": "The bold move is often just the move you have delayed too long.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["boldness", "delay", "action"]
+  },
+  {
+    "q": "You can be afraid and still be the person who goes.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["fear", "action", "bravery"]
+  },
+  {
+    "q": "Stand where your values can find you.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["values", "integrity", "stand"]
+  },
+  {
+    "q": "The fear of a wrong turn should not become a life spent parked.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["fear", "decisions", "movement"]
+  },
+  {
+    "q": "Take the risk that makes your future self breathe easier.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["risk", "future", "relief"]
+  },
+  {
+    "q": "You do not find courage first; you build it by using it.",
+    "a": "",
+    "cat": "courage",
+    "tags": ["courage", "practice", "growth"]
+  }
+]

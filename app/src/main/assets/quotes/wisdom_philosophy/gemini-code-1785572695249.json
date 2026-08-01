@@ -1,0 +1,902 @@
+[
+  {
+    "q": "The obstacle in the path becomes the path. Never forget, within every obstacle is an opportunity to improve our condition.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["perception", "obstacle", "opportunity"]
+  },
+  {
+    "q": "How much more grievous are the consequences of anger than the causes of it.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["anger", "emotional regulation", "wisdom"]
+  },
+  {
+    "q": "Loss is nothing else but change, and change is Nature's delight.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["impermanence", "change", "nature"]
+  },
+  {
+    "q": "Confine yourself to the present.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["presence", "mindfulness", "focus"]
+  },
+  {
+    "q": "Whenever you are about to find fault with someone, ask yourself the following question: What fault of mine most nearly resembles the one I am about to criticize?",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["self-reflection", "empathy", "humility"]
+  },
+  {
+    "q": "Everything we hear is an opinion, not a fact. Everything we see is a perspective, not the truth.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["perspective", "perception", "truth"]
+  },
+  {
+    "q": "Dwell on the beauty of life. Watch the stars, and see yourself running with them.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["beauty", "perspective", "nature"]
+  },
+  {
+    "q": "The soul becomes dyed with the color of its thoughts.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["thoughts", "soul", "mindset"]
+  },
+  {
+    "q": "No evil is honorable; but death is honorable; therefore death is not evil.",
+    "a": "Zeno of Citium",
+    "cat": "stoic",
+    "tags": ["virtue", "memento mori", "reason"]
+  },
+  {
+    "q": "Steel hides in dust, but true virtue shines through all darkness.",
+    "a": "Zeno of Citium",
+    "cat": "stoic",
+    "tags": ["virtue", "character", "light"]
+  },
+  {
+    "q": "We have two ears and one mouth so that we can listen twice as much as we speak.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["listening", "wisdom", "humility"]
+  },
+  {
+    "q": "Other people's views and troubles can be contagious. Don't sabotage yourself by unwittingly adopting negative, unproductive attitudes.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["boundaries", "mindset", "environment"]
+  },
+  {
+    "q": "Attach yourself to what is spiritually superior, regardless of what other people think or do.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["integrity", "virtue", "sovereignty"]
+  },
+  {
+    "q": "It is impossible for a man to learn what he thinks he already knows.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["humility", "learning", "ego"]
+  },
+  {
+    "q": "Circumstances don't make the man, they only reveal him to himself.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["character", "adversity", "self-knowledge"]
+  },
+  {
+    "q": "Key to peace is taking full responsibility for your emotional reactions.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["responsibility", "peace", "emotional regulation"]
+  },
+  {
+    "q": "To be calm is the highest achievement of the self.",
+    "a": "Zenodotus",
+    "cat": "stoic",
+    "tags": ["calm", "inner peace", "mastery"]
+  },
+  {
+    "q": "He suffers more than is necessary, who suffers before it is necessary.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["anxiety", "suffering", "presence"]
+  },
+  {
+    "q": "True happiness is to enjoy the present, without anxious dependence upon the future.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["happiness", "presence", "detachment"]
+  },
+  {
+    "q": "Every night before going to sleep, we must ask ourselves: what weakness did I overcome today?",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["self-reflection", "growth", "discipline"]
+  },
+  {
+    "q": "As is a tale, so is life: not how long it is, but how good it is, is what matters.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["quality", "life", "memento mori"]
+  },
+  {
+    "q": "Difficulties strengthen the mind, as labor does the body.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["resilience", "mindset", "growth"]
+  },
+  {
+    "q": "While we wait for life, life passes.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["time", "action", "memento mori"]
+  },
+  {
+    "q": "Silence is a lesson learned through the many sufferings of life.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["silence", "suffering", "wisdom"]
+  },
+  {
+    "q": "Nothing, to my way of thinking, is a better proof of a well-ordered mind than a man's ability to stop just where he is and pass some time in his own company.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["solitude", "mindset", "self-sufficiency"]
+  },
+  {
+    "q": "Associate with people who are likely to improve you.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["relationships", "growth", "influence"]
+  },
+  {
+    "q": "Until we have begun to go without them, we fail to realize how unnecessary many things are.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["simplicity", "frugality", "freedom"]
+  },
+  {
+    "q": "A man is as wretched as he has convinced himself he is.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["mindset", "perception", "suffering"]
+  },
+  {
+    "q": "Ignorance of the self is the root of all cowardice.",
+    "a": "Cato the Younger",
+    "cat": "stoic",
+    "tags": ["self-knowledge", "courage", "truth"]
+  },
+  {
+    "q": "Virtue needs no ornament; it is its own glorious reward.",
+    "a": "Cato the Younger",
+    "cat": "stoic",
+    "tags": ["virtue", "character", "integrity"]
+  },
+  {
+    "q": "I will begin to speak only when I am certain that what I speak is not better left unsaid.",
+    "a": "Cato the Younger",
+    "cat": "stoic",
+    "tags": ["speech", "discipline", "silence"]
+  },
+  {
+    "q": "The soul is like a vessel filled with water; impressions are like rays of light falling upon it.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["perception", "mind", "soul"]
+  },
+  {
+    "q": "All the art of living lies in a fine mingling of letting go and holding on.",
+    "a": "Epictetus",
+    "cat": "stoic",
+    "tags": ["balance", "letting go", "wisdom"]
+  },
+  {
+    "q": "No evil can happen to a good man, either in life or after death.",
+    "a": "Gaius Musonius Rufus",
+    "cat": "stoic",
+    "tags": ["virtue", "protection", "faith"]
+  },
+  {
+    "q": "If you accomplish something good with hard work, the labor passes quickly, but the good endures.",
+    "a": "Gaius Musonius Rufus",
+    "cat": "stoic",
+    "tags": ["effort", "legacy", "work"]
+  },
+  {
+    "q": "To be like the rock that the waves keep crashing over. It stands unmoved and the raging sea falls still around it.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["inner fortress", "resilience", "stillness"]
+  },
+  {
+    "q": "Inwardly, we ought to be different in every way, but our outward dress should blend with the crowd.",
+    "a": "Seneca",
+    "cat": "stoic",
+    "tags": ["humility", "inner strength", "authenticity"]
+  },
+  {
+    "q": "He who acts unjustly acts impiously.",
+    "a": "Marcus Aurelius",
+    "cat": "stoic",
+    "tags": ["justice", "virtue", "morality"]
+  },
+  {
+    "q": "Nature does not hurry, yet everything is accomplished.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["nature", "patience", "action"]
+  },
+  {
+    "q": "To understand others is to have knowledge; to understand yourself is to be illumined.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["self-awareness", "wisdom", "knowledge"]
+  },
+  {
+    "q": "A good traveler has no fixed plans and is not intent on arriving.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["journey", "presence", "adaptability"]
+  },
+  {
+    "q": "Truthful words are not beautiful; beautiful words are not truthful.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["truth", "speech", "authenticity"]
+  },
+  {
+    "q": "The wise man is one who, knows, what he does not know.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["wisdom", "humility", "self-knowledge"]
+  },
+  {
+    "q": "When you realize nothing is lacking, the whole world belongs to you.",
+    "a": "Lao Tzu",
+    "cat": "eastern",
+    "tags": ["contentment", "gratitude", "peace"]
+  },
+  {
+    "q": "Thousands of candles can be lighted from a single candle, and the life of the candle will not be shortened. Happiness never decreases by being shared.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["happiness", "sharing", "abundance"]
+  },
+  {
+    "q": "Three things cannot be long hidden: the sun, the moon, and the truth.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["truth", "reality", "clarity"]
+  },
+  {
+    "q": "You, yourself, as much as anybody in the entire universe, deserve your love and affection.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["self-love", "compassion", "worth"]
+  },
+  {
+    "q": "Health is the greatest gift, contentment the greatest wealth, faithfulness the best relationship.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["health", "wealth", "relationships"]
+  },
+  {
+    "q": "No one saves us but ourselves. No one can and no one may. We ourselves must walk the path.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["sovereignty", "action", "independence"]
+  },
+  {
+    "q": "What you think, you become. What you feel, you attract. What you imagine, you create.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["mindset", "manifestation", "perception"]
+  },
+  {
+    "q": "Smile, breathe and go slowly.",
+    "a": "Thich Nhat Hanh",
+    "cat": "eastern",
+    "tags": ["mindfulness", "presence", "calm"]
+  },
+  {
+    "q": "Because you are alive, everything is possible.",
+    "a": "Thich Nhat Hanh",
+    "cat": "eastern",
+    "tags": ["possibility", "life", "hope"]
+  },
+  {
+    "q": "Letting go gives us freedom, and freedom is the only condition for happiness.",
+    "a": "Thich Nhat Hanh",
+    "cat": "eastern",
+    "tags": ["freedom", "letting go", "happiness"]
+  },
+  {
+    "q": "Walk as if you are kissing the Earth with your feet.",
+    "a": "Thich Nhat Hanh",
+    "cat": "eastern",
+    "tags": ["presence", "reverence", "mindfulness"]
+  },
+  {
+    "q": "Stop acting so small. You are the universe in ecstatic motion.",
+    "a": "Rumi",
+    "cat": "eastern",
+    "tags": ["potential", "universe", "identity"]
+  },
+  {
+    "q": "What you seek is seeking you.",
+    "a": "Rumi",
+    "cat": "eastern",
+    "tags": ["desire", "destiny", "connection"]
+  },
+  {
+    "q": "Let yourself be silently drawn by the strange pull of what you really love. It will not lead you astray.",
+    "a": "Rumi",
+    "cat": "eastern",
+    "tags": ["intuition", "love", "purpose"]
+  },
+  {
+    "q": "Out beyond ideas of wrongdoing and rightdoing there is a field. I'll meet you there.",
+    "a": "Rumi",
+    "cat": "eastern",
+    "tags": ["non-dualism", "judgment", "connection"]
+  },
+  {
+    "q": "Your task is not to seek for love, but merely to seek and find all the barriers within yourself that you have built against it.",
+    "a": "Rumi",
+    "cat": "eastern",
+    "tags": ["love", "healing", "self-discovery"]
+  },
+  {
+    "q": "In the sky, there is no distinction of east and west; people create distinctions out of their own minds and then believe them to be true.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["perception", "illusion", "non-dualism"]
+  },
+  {
+    "q": "A flower falls, even though we love it; and a weed grows, even though we do not love it.",
+    "a": "Eihei Dogen",
+    "cat": "eastern",
+    "tags": ["acceptance", "nature", "impermanence"]
+  },
+  {
+    "q": "To study the Way is to study the self. To study the self is to forget the self.",
+    "a": "Eihei Dogen",
+    "cat": "eastern",
+    "tags": ["ego", "self-study", "zen"]
+  },
+  {
+    "q": "Zen is not some kind of excitement, but concentration on our usual everyday routine.",
+    "a": "Shunryu Suzuki",
+    "cat": "eastern",
+    "tags": ["zen", "routine", "presence"]
+  },
+  {
+    "q": "In the beginner's mind there are many possibilities, but in the expert's there are few.",
+    "a": "Shunryu Suzuki",
+    "cat": "eastern",
+    "tags": ["beginner's mind", "curiosity", "openness"]
+  },
+  {
+    "q": "There is nothing outside of yourself that can ever enable you to get better, stronger, richer, quicker, or smarter. Everything is within.",
+    "a": "Miyamoto Musashi",
+    "cat": "eastern",
+    "tags": ["sovereignty", "inner strength", "mastery"]
+  },
+  {
+    "q": "Do nothing which is of no use.",
+    "a": "Miyamoto Musashi",
+    "cat": "eastern",
+    "tags": ["purpose", "action", "focus"]
+  },
+  {
+    "q": "Perceive that which cannot be seen with the eye.",
+    "a": "Miyamoto Musashi",
+    "cat": "eastern",
+    "tags": ["perception", "intuition", "awareness"]
+  },
+  {
+    "q": "It is better to live your own destiny imperfectly than to live an imitation of somebody else's life with perfection.",
+    "a": "Bhagavad Gita",
+    "cat": "eastern",
+    "tags": ["authenticity", "destiny", "courage"]
+  },
+  {
+    "q": "A person can rise through the efforts of his own mind; or draw himself down, in the same manner. Because each person is his own friend or enemy.",
+    "a": "Bhagavad Gita",
+    "cat": "eastern",
+    "tags": ["mindset", "responsibility", "self-mastery"]
+  },
+  {
+    "q": "Set thy heart upon thy work, but never on its reward.",
+    "a": "Bhagavad Gita",
+    "cat": "eastern",
+    "tags": ["detachment", "duty", "work"]
+  },
+  {
+    "q": "Those who are motivated only by desire for the fruits of action are miserable, for they are constantly anxious about the results of what they do.",
+    "a": "Bhagavad Gita",
+    "cat": "eastern",
+    "tags": ["anxiety", "detachment", "action"]
+  },
+  {
+    "q": "Tension is who you think you should be. Relaxation is who you are.",
+    "a": "Chinese proverb",
+    "cat": "eastern",
+    "tags": ["authenticity", "relaxation", "tension"]
+  },
+  {
+    "q": "If your compassion does not include yourself, it is incomplete.",
+    "a": "Jack Kornfield",
+    "cat": "eastern",
+    "tags": ["compassion", "self-love", "healing"]
+  },
+  {
+    "q": "Wisdom is knowing I am nothing, love is knowing I am everything, and between the two my life moves.",
+    "a": "Nisargadatta Maharaj",
+    "cat": "eastern",
+    "tags": ["wisdom", "love", "balance"]
+  },
+  {
+    "q": "The past is already gone, the future is not yet here. There's only one moment for you to live.",
+    "a": "Buddha",
+    "cat": "eastern",
+    "tags": ["presence", "time", "mindfulness"]
+  },
+  {
+    "q": "To understand everything is to forgive everything.",
+    "a": "Osho",
+    "cat": "eastern",
+    "tags": ["understanding", "forgiveness", "empathy"]
+  },
+  {
+    "q": "The fundamental delusion is that there is something out there that will make me happy and fulfilled forever.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["delusion", "happiness", "desire"]
+  },
+  {
+    "q": "In an age of infinite leverage, judgment is the most important skill.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["judgment", "leverage", "modern"]
+  },
+  {
+    "q": "Read what you love until you love to read.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["reading", "habits", "love"]
+  },
+  {
+    "q": "Impatience with actions, patience with results.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["patience", "action", "mindset"]
+  },
+  {
+    "q": "The three most harmful addictions are heroin, carbohydrates, and a monthly salary.",
+    "a": "Nassim Nicholas Taleb",
+    "cat": "modern_minds",
+    "tags": ["freedom", "addiction", "risk"]
+  },
+  {
+    "q": "A stoic is someone who transforms fear into prudence, pain into transformation, mistakes into initiation, and desire into undertaking.",
+    "a": "Nassim Nicholas Taleb",
+    "cat": "modern_minds",
+    "tags": ["stoicism", "transformation", "adversity"]
+  },
+  {
+    "q": "I learned that if you work hard and creatively, you can have just about anything you want, but not everything you want.",
+    "a": "Ray Dalio",
+    "cat": "modern_minds",
+    "tags": ["focus", "priorities", "reality"]
+  },
+  {
+    "q": "Nothing in life is as important as you think it is, while you are thinking about it.",
+    "a": "Daniel Kahneman",
+    "cat": "modern_minds",
+    "tags": ["perspective", "focus", "illusion"]
+  },
+  {
+    "q": "We are a way for the cosmos to know itself.",
+    "a": "Carl Sagan",
+    "cat": "modern_minds",
+    "tags": ["existence", "cosmos", "awareness"]
+  },
+  {
+    "q": "The first principle is that you must not fool yourself and you are the easiest person to fool.",
+    "a": "Richard Feynman",
+    "cat": "modern_minds",
+    "tags": ["honesty", "self-deception", "truth"]
+  },
+  {
+    "q": "Show me the incentive and I will show you the outcome.",
+    "a": "Charlie Munger",
+    "cat": "modern_minds",
+    "tags": ["incentives", "human nature", "systems"]
+  },
+  {
+    "q": "Innovation distinguishes between a leader and a follower.",
+    "a": "Steve Jobs",
+    "cat": "modern_minds",
+    "tags": ["innovation", "leadership", "vision"]
+  },
+  {
+    "q": "Goals are good for setting a direction, but systems are best for making progress.",
+    "a": "James Clear",
+    "cat": "modern_minds",
+    "tags": ["systems", "goals", "progress"]
+  },
+  {
+    "q": "Imagination is more important than knowledge. For knowledge is limited, whereas imagination embraces the entire world.",
+    "a": "Albert Einstein",
+    "cat": "modern_minds",
+    "tags": ["imagination", "knowledge", "potential"]
+  },
+  {
+    "q": "You can't go back and change the beginning, but you can start where you are and change the ending.",
+    "a": "C.S. Lewis",
+    "cat": "modern_minds",
+    "tags": ["agency", "beginnings", "change"]
+  },
+  {
+    "q": "There are no solutions. There are only trade-offs.",
+    "a": "Thomas Sowell",
+    "cat": "modern_minds",
+    "tags": ["tradeoffs", "realism", "decision making"]
+  },
+  {
+    "q": "He who has a why to live for can bear almost any how.",
+    "a": "Friedrich Nietzsche",
+    "cat": "modern_minds",
+    "tags": ["purpose", "resilience", "meaning"]
+  },
+  {
+    "q": "It is no measure of health to be well adjusted to a profoundly sick society.",
+    "a": "Jiddu Krishnamurti",
+    "cat": "modern_minds",
+    "tags": ["society", "health", "nonconformity"]
+  },
+  {
+    "q": "The most important trick to be happy is to realize that happiness is a choice that you make and a skill that you develop.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["happiness", "choice", "skill"]
+  },
+  {
+    "q": "If you want to make the wrong decision, ask everyone.",
+    "a": "Naval Ravikant",
+    "cat": "modern_minds",
+    "tags": ["decision making", "consensus", "independence"]
+  },
+  {
+    "q": "I have never let my schooling interfere with my education.",
+    "a": "Mark Twain",
+    "cat": "modern_minds",
+    "tags": ["education", "learning", "independence"]
+  },
+  {
+    "q": "You only have to do a very few things right in your life so long as you don't do too many things wrong.",
+    "a": "Warren Buffett",
+    "cat": "modern_minds",
+    "tags": ["investing", "decisions", "risk"]
+  },
+  {
+    "q": "Risk comes from not knowing what you're doing.",
+    "a": "Warren Buffett",
+    "cat": "modern_minds",
+    "tags": ["risk", "knowledge", "competence"]
+  },
+  {
+    "q": "Someone's sitting in the shade today because someone planted a tree a long time ago.",
+    "a": "Warren Buffett",
+    "cat": "modern_minds",
+    "tags": ["foresight", "legacy", "compounding"]
+  },
+  {
+    "q": "The biggest risk is not taking any risk.",
+    "a": "Mark Zuckerberg",
+    "cat": "modern_minds",
+    "tags": ["risk", "action", "growth"]
+  },
+  {
+    "q": "I think it is possible for ordinary people to choose to be extraordinary.",
+    "a": "Elon Musk",
+    "cat": "modern_minds",
+    "tags": ["choice", "potential", "ambition"]
+  },
+  {
+    "q": "Focus is the arrow, and energy is the bow.",
+    "a": "Andrew Huberman",
+    "cat": "modern_minds",
+    "tags": ["focus", "energy", "execution"]
+  },
+  {
+    "q": "Motivation is what gets you started. Habit is what keeps you going.",
+    "a": "Jim Ryun",
+    "cat": "modern_minds",
+    "tags": ["habits", "motivation", "consistency"]
+  },
+  {
+    "q": "Don't wish it were easier, wish you were better.",
+    "a": "Jim Rohn",
+    "cat": "modern_minds",
+    "tags": ["growth", "adversity", "mindset"]
+  },
+  {
+    "q": "Formal education will make you a living; self-education will make you a fortune.",
+    "a": "Jim Rohn",
+    "cat": "modern_minds",
+    "tags": ["education", "wealth", "autodidact"]
+  },
+  {
+    "q": "You are the average of the five people you spend the most time with.",
+    "a": "Jim Rohn",
+    "cat": "modern_minds",
+    "tags": ["environment", "influence", "relationships"]
+  },
+  {
+    "q": "The obstacle is the way.",
+    "a": "Ryan Holiday",
+    "cat": "modern_minds",
+    "tags": ["perception", "obstacles", "stoicism"]
+  },
+  {
+    "q": "Action expresses priorities.",
+    "a": "Mahatma Gandhi",
+    "cat": "modern_minds",
+    "tags": ["action", "priorities", "truth"]
+  },
+  {
+    "q": "It is not the critic who counts; not the man who points out how the strong man stumbles.",
+    "a": "Theodore Roosevelt",
+    "cat": "modern_minds",
+    "tags": ["courage", "action", "vulnerability"]
+  },
+  {
+    "q": "Comparison is the thief of joy.",
+    "a": "Theodore Roosevelt",
+    "cat": "modern_minds",
+    "tags": ["comparison", "joy", "mindset"]
+  },
+  {
+    "q": "Success is stumbling from failure to failure with no loss of enthusiasm.",
+    "a": "Winston Churchill",
+    "cat": "modern_minds",
+    "tags": ["success", "failure", "enthusiasm"]
+  },
+  {
+    "q": "We shape our buildings; thereafter they shape us.",
+    "a": "Winston Churchill",
+    "cat": "modern_minds",
+    "tags": ["environment", "design", "systems"]
+  },
+  {
+    "q": "This too shall pass.",
+    "a": "Sufi proverb",
+    "cat": "life_truth",
+    "tags": ["impermanence", "perspective", "resilience"]
+  },
+  {
+    "q": "Don't light yourself on fire to keep others warm.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["boundaries", "self-care", "relationships"]
+  },
+  {
+    "q": "A ship in harbor is safe, but that is not what ships are built for.",
+    "a": "John A. Shedd",
+    "cat": "life_truth",
+    "tags": ["courage", "purpose", "risk"]
+  },
+  {
+    "q": "The best time to repair the roof is when the sun is shining.",
+    "a": "John F. Kennedy",
+    "cat": "life_truth",
+    "tags": ["preparation", "foresight", "action"]
+  },
+  {
+    "q": "Hard times create strong men. Strong men create good times. Good times create weak men. And, weak men create hard times.",
+    "a": "G. Michael Hopf",
+    "cat": "life_truth",
+    "tags": ["cycles", "resilience", "society"]
+  },
+  {
+    "q": "We are what we repeatedly do. Excellence, then, is not an act, but a habit.",
+    "a": "Will Durant",
+    "cat": "life_truth",
+    "tags": ["excellence", "habits", "consistency"]
+  },
+  {
+    "q": "If you tell the truth, you don't have to remember anything.",
+    "a": "Mark Twain",
+    "cat": "life_truth",
+    "tags": ["truth", "honesty", "peace"]
+  },
+  {
+    "q": "A fool is known by his speech; and a wise man by silence.",
+    "a": "Pythagoras",
+    "cat": "life_truth",
+    "tags": ["silence", "wisdom", "restraint"]
+  },
+  {
+    "q": "Sometimes the hardest thing and the right thing are the same.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["courage", "morality", "decisions"]
+  },
+  {
+    "q": "You don't have to attend every argument you're invited to.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["peace", "boundaries", "focus"]
+  },
+  {
+    "q": "The darkest night is often the bridge to the brightest tomorrow.",
+    "a": "Jonathan Lockwood Huie",
+    "cat": "life_truth",
+    "tags": ["hope", "adversity", "transition"]
+  },
+  {
+    "q": "A comfort zone is a beautiful place, but nothing ever grows there.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["growth", "comfort zone", "risk"]
+  },
+  {
+    "q": "Some people feel the rain. Others just get wet.",
+    "a": "Bob Marley",
+    "cat": "life_truth",
+    "tags": ["perception", "presence", "appreciation"]
+  },
+  {
+    "q": "Worry is like paying a debt you don't owe.",
+    "a": "Mark Twain",
+    "cat": "life_truth",
+    "tags": ["worry", "anxiety", "mindset"]
+  },
+  {
+    "q": "The master has failed more times than the beginner has even tried.",
+    "a": "Stephen McCranie",
+    "cat": "life_truth",
+    "tags": ["failure", "mastery", "persistence"]
+  },
+  {
+    "q": "A meaningful silence is always better than meaningless words.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["silence", "speech", "wisdom"]
+  },
+  {
+    "q": "If you want to know what a man's like, take a good look at how he treats his inferiors, not his equals.",
+    "a": "J.K. Rowling",
+    "cat": "life_truth",
+    "tags": ["character", "respect", "power"]
+  },
+  {
+    "q": "Don't raise your voice, improve your argument.",
+    "a": "Desmond Tutu",
+    "cat": "life_truth",
+    "tags": ["communication", "logic", "patience"]
+  },
+  {
+    "q": "The only limit to our realization of tomorrow will be our doubts of today.",
+    "a": "Franklin D. Roosevelt",
+    "cat": "life_truth",
+    "tags": ["doubt", "belief", "potential"]
+  },
+  {
+    "q": "In three words I can sum up everything I've learned about life: it goes on.",
+    "a": "Robert Frost",
+    "cat": "life_truth",
+    "tags": ["resilience", "continuity", "time"]
+  },
+  {
+    "q": "Be kind, for everyone you meet is fighting a hard battle.",
+    "a": "Ian Maclaren",
+    "cat": "life_truth",
+    "tags": ["kindness", "empathy", "humanity"]
+  },
+  {
+    "q": "You can't pour from an empty cup. Take care of yourself first.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["self-care", "boundaries", "energy"]
+  },
+  {
+    "q": "Forgiveness is setting a prisoner free and discovering that the prisoner was you.",
+    "a": "Lewis Smedes",
+    "cat": "life_truth",
+    "tags": ["forgiveness", "release", "freedom"]
+  },
+  {
+    "q": "To plant a garden is to believe in tomorrow.",
+    "a": "Audrey Hepburn",
+    "cat": "life_truth",
+    "tags": ["hope", "action", "future"]
+  },
+  {
+    "q": "The less you respond to negative people, the more peaceful your life will become.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["boundaries", "peace", "focus"]
+  },
+  {
+    "q": "Growth is painful. Change is painful. But nothing is as painful as staying stuck somewhere you don't belong.",
+    "a": "Mandy Hale",
+    "cat": "life_truth",
+    "tags": ["growth", "change", "pain"]
+  },
+  {
+    "q": "Never regret a day in your life: good days give happiness, bad days give experience, worst days give lessons, and best days give memories.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["regret", "perspective", "experience"]
+  },
+  {
+    "q": "Distance sometimes lets you know who is worth keeping, and who is worth letting go.",
+    "a": "Lana Del Rey",
+    "cat": "life_truth",
+    "tags": ["relationships", "distance", "clarity"]
+  },
+  {
+    "q": "One day or day one. You decide.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["action", "procrastination", "choice"]
+  },
+  {
+    "q": "Expectation is the root of all heartache.",
+    "a": "William Shakespeare",
+    "cat": "life_truth",
+    "tags": ["expectation", "disappointment", "mindset"]
+  },
+  {
+    "q": "A negative mind will never give you a positive life.",
+    "a": "Anonymous",
+    "cat": "life_truth",
+    "tags": ["mindset", "positivity", "reality"]
+  },
+  {
+    "q": "Beautiful things don't ask for attention.",
+    "a": "James Thurber",
+    "cat": "life_truth",
+    "tags": ["beauty", "humility", "nature"]
+  },
+  {
+    "q": "Everything you've ever wanted is on the other side of fear.",
+    "a": "George Addair",
+    "cat": "life_truth",
+    "tags": ["fear", "desire", "courage"]
+  },
+  {
+    "q": "Don't let yesterday take up too much of today.",
+    "a": "Will Rogers",
+    "cat": "life_truth",
+    "tags": ["presence", "past", "focus"]
+  },
+  {
+    "q": "If it costs you your peace, it's too expensive.",
+    "a": "Paulo Coelho",
+    "cat": "life_truth",
+    "tags": ["peace", "boundaries", "priorities"]
+  },
+  {
+    "q": "Make peace with your past so it won't destroy your present.",
+    "a": "Paulo Coelho",
+    "cat": "life_truth",
+    "tags": ["past", "peace", "healing"]
+  },
+  {
+    "q": "Life is what happens when you're busy making other plans.",
+    "a": "John Lennon",
+    "cat": "life_truth",
+    "tags": ["presence", "life", "control"]
+  }
+]

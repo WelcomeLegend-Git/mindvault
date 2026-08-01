@@ -45,13 +45,18 @@ class FocusAccessibilityService : AccessibilityService() {
                 // Record distraction in statistics
                 StatisticsManager.recordDistraction(packageName)
                 
-                // Try overlay block if app appears in small/floating window
-                val bounds = getLatestWindowBounds(event)
-                if (bounds != null && bounds.width() < resources.displayMetrics.widthPixels &&
-                    bounds.height() < resources.displayMetrics.heightPixels) {
+                // Detect if the blocked app is running in a floating/freeform/split window
+                val windowBounds = getWindowBoundsForPackage(packageName)
+                val screenWidth = resources.displayMetrics.widthPixels
+                val screenHeight = resources.displayMetrics.heightPixels
+                val isFloating = windowBounds != null &&
+                        (windowBounds.width() < screenWidth || windowBounds.height() < screenHeight)
+
+                if (isFloating && windowBounds != null) {
+                    Log.i(TAG, "Floating window detected for $packageName, showing overlay")
                     val label = AppManager.getAppName(this, packageName)
-                    OverlayBlocker.show(this, bounds, label)
-                    // Additionally, attempt to close the offending window so it cannot continue in mini mode
+                    OverlayBlocker.show(this, windowBounds, label)
+                    // Force-close the floating window
                     try {
                         performGlobalAction(GLOBAL_ACTION_BACK)
                     } catch (_: Exception) { }
@@ -60,6 +65,9 @@ class FocusAccessibilityService : AccessibilityService() {
                     showBlockedScreen(packageName)
                 }
             }
+        } else {
+            // App is not blocked (or focus mode inactive) — clean up any lingering overlay
+            OverlayBlocker.hide(this)
         }
     }
 
@@ -80,15 +88,35 @@ class FocusAccessibilityService : AccessibilityService() {
         startActivity(intent)
     }
 
-    private fun getLatestWindowBounds(event: AccessibilityEvent?): Rect? {
+    /**
+     * Scans all visible windows via the Accessibility API to find the actual
+     * window belonging to [packageName]. Returns its screen bounds, or null
+     * if no matching window is found.
+     *
+     * This is far more reliable than event.source.getBoundsInScreen() which
+     * often returns null or returns the bounds of a single UI node rather
+     * than the window itself.
+     */
+    private fun getWindowBoundsForPackage(packageName: String): Rect? {
         try {
-            val node = event?.source ?: return null
-            val rect = Rect()
-            node.getBoundsInScreen(rect)
-            return rect
-        } catch (_: Exception) {
-            return null
+            val windowList = windows ?: return null
+            for (window in windowList) {
+                val root = window.root
+                if (root != null && root.packageName?.toString() == packageName) {
+                    val rect = Rect()
+                    window.getBoundsInScreen(rect)
+                    root.recycle()
+                    // Ignore zero-sized or invalid bounds
+                    if (rect.width() > 0 && rect.height() > 0) {
+                        return rect
+                    }
+                }
+                root?.recycle()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error scanning windows for $packageName", e)
         }
+        return null
     }
 
     override fun onInterrupt() {
@@ -100,7 +128,8 @@ class FocusAccessibilityService : AccessibilityService() {
         val info = AccessibilityServiceInfo()
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS
+        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
+            AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         serviceInfo = info
         Log.i(TAG, "Accessibility Service connected and configured.")
         isServiceRunning = true

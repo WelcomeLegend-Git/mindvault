@@ -163,14 +163,14 @@ object FocusManager {
         val activeSlot = if (areAllPermissionsGranted() && currentConfiguration.focusModeEnabled) potentialActiveSlot else null
 
         if (_activeSlotFlow.value?.id != activeSlot?.id) {
-            // End previous session if there was one
-            if (_activeSlotFlow.value != null && activeSlot == null) {
+            // End previous session if there was one (handles both → null and → different slot)
+            if (_activeSlotFlow.value != null) {
                 StatisticsManager.endFocusSession(completed = true)
                 Log.d("FocusManager", "Ended focus session")
             }
             
             // Start new session if entering a slot AND permissions are granted
-            if (_activeSlotFlow.value == null && activeSlot != null) {
+            if (activeSlot != null) {
                 StatisticsManager.startFocusSession(
                     type = activeSlot.type.name,
                     blockedApps = currentConfiguration.selectedApps
