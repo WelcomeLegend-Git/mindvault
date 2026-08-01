@@ -12,20 +12,11 @@ class DailyMotivationWorker(
 ) : CoroutineWorker(appContext, params) {
 
     override suspend fun doWork(): Result {
-        // Fetch a quote from the unified engine, leveraging the "Deck of Cards" to avoid repeats
-        val quoteResult = com.example.mindvault.engine.QuoteEngine.getQuoteForContext(
+        // Show the fancy bitmap notification which internally fetches from QuoteEngine
+        com.example.mindvault.ui.notifications.CustomNotificationBuilder.showQuoteNotification(
             context = appContext,
-            isStudySessionActive = false,
-            isScrollingSocialMedia = false
-        )
-        
-        // Show the fancy bitmap notification
-        com.example.mindvault.ui.notifications.CustomNotificationBuilder.showBitmapNotification(
-            context = appContext,
-            quoteText = quoteResult.quote.q,
-            authorText = quoteResult.quote.a,
-            fontFileName = quoteResult.fontFileName,
-            vibe = quoteResult.vibe
+            isStudySession = false,
+            isScrolling = false
         )
         
         return Result.success()
