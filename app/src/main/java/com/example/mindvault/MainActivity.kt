@@ -75,6 +75,9 @@ import com.example.mindvault.ui.theme.MindVaultTheme
 import com.example.mindvault.utils.AppManager
 import com.example.mindvault.utils.PermissionManager
 import com.example.mindvault.utils.UsageAccessManager
+import com.example.mindvault.receivers.MindVaultDeviceAdminReceiver
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import kotlinx.coroutines.delay
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -208,17 +211,19 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
         
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
             StatusCard()
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             PermissionStatusCard(expandedState)
-            Spacer(modifier = Modifier.height(24.dp))
-            FeatureCardsGrid(onLaunchLogin = onLaunchLogin)
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            FeatureCardsGrid(
+                onLaunchLogin = onLaunchLogin,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -479,11 +484,17 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     var hasOverlay by remember { mutableStateOf(PermissionManager.hasOverlayPermission(context)) }
     var hasNotification by remember { mutableStateOf(AppManager.hasNotificationListenerPermission(context)) }
     var hasAccessibility by remember { mutableStateOf(PermissionManager.isAccessibilityServiceEnabled(context)) }
+    var hasDeviceAdmin by remember {
+        val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val adminComponent = ComponentName(context, MindVaultDeviceAdminReceiver::class.java)
+        mutableStateOf(dpm.isAdminActive(adminComponent))
+    }
     
     // Dialog states
     var showOverlayDialog by remember { mutableStateOf(false) }
     var showAccessibilityDialog by remember { mutableStateOf(false) }
     var showNotificationDialog by remember { mutableStateOf(false) }
+    var showDeviceAdminDialog by remember { mutableStateOf(false) }
 
     // Re-check permissions on resume
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -493,6 +504,9 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
                 hasOverlay = PermissionManager.hasOverlayPermission(context)
                 hasNotification = AppManager.hasNotificationListenerPermission(context)
                 hasAccessibility = PermissionManager.isAccessibilityServiceEnabled(context)
+                val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                val adminComponent = ComponentName(context, MindVaultDeviceAdminReceiver::class.java)
+                hasDeviceAdmin = dpm.isAdminActive(adminComponent)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -502,7 +516,7 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
         }
     }
 
-    val allPermissionsGranted = hasOverlay && hasNotification && hasAccessibility
+    val allPermissionsGranted = hasOverlay && hasNotification && hasAccessibility && hasDeviceAdmin
     
     // Auto-collapse when all permissions are granted
     LaunchedEffect(allPermissionsGranted) {
@@ -588,6 +602,10 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
                         Spacer(modifier = Modifier.height(12.dp))
 
                         PermissionRow("Accessibility Service", hasAccessibility) { showAccessibilityDialog = true }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        PermissionRow("Uninstall Protection", hasDeviceAdmin) { showDeviceAdminDialog = true }
                     }
                 }
             }
@@ -642,6 +660,27 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
             AppManager.openNotificationListenerSettings(context)
         }
     )
+    
+    PermissionExplanationDialog(
+        showDialog = showDeviceAdminDialog,
+        onDismiss = { showDeviceAdminDialog = false },
+        title = "Uninstall Protection (Device Admin)",
+        explanation = "MindVault uses Device Administrator to prevent accidental or impulsive uninstallation during focus sessions.\n\n" +
+                "🔒 Privacy Guarantee:\n" +
+                "• Only prevents app removal, no other device control\n" +
+                "• Does not lock your phone or erase data\n" +
+                "• Can be disabled anytime from this screen\n\n" +
+                "This ensures MindVault stays on your device to protect your focus habits.",
+        onGrantClick = {
+            showDeviceAdminDialog = false
+            val adminComponent = ComponentName(context, MindVaultDeviceAdminReceiver::class.java)
+            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
+                putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+                putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Enable to protect MindVault from being uninstalled.")
+            }
+            context.startActivity(intent)
+        }
+    )
 }
 
 @Composable
@@ -690,16 +729,16 @@ fun PermissionRow(name: String, isEnabled: Boolean, onRequest: () -> Unit) {
 }
 
 @Composable
-fun FeatureCardsGrid(onLaunchLogin: () -> Unit) {
+fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // First Row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureCard(
@@ -737,11 +776,11 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit) {
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         
         // Second Row
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().weight(1f),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureCard(
@@ -797,8 +836,8 @@ fun FeatureCard(
 
     Card(
         modifier = modifier
-            .padding(12.dp) // Increased padding to make cards smaller
-            .aspectRatio(1f)
+            .padding(8.dp)
+            .fillMaxHeight()
             .clickable(enabled = isActive, onClick = onClick),
         shape = RoundedCornerShape(24.dp), // Increased corner radius
         colors = CardDefaults.cardColors(

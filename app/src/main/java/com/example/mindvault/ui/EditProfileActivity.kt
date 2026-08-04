@@ -83,27 +83,16 @@ fun EditProfileScreen() {
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { 
-                        Text(
-                            "✨ Edit Profile", 
-                            color = Color.White, 
-                            fontSize = 22.sp, 
-                            fontWeight = FontWeight.Bold,
-                            style = TextStyle(
-                                shadow = androidx.compose.ui.graphics.Shadow(
-                                    color = Color(0xFFFFD700).copy(alpha = 0.3f),
-                                    offset = androidx.compose.ui.geometry.Offset(0f, 2f),
-                                    blurRadius = 4f
-                                )
-                            )
-                        ) 
-                    },
+                    title = { Text("Edit Profile", fontWeight = FontWeight.Bold) },
                     navigationIcon = {
                         IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        titleContentColor = Color.White
+                    )
                 )
             },
             containerColor = Color.Transparent
@@ -365,7 +354,7 @@ fun EditProfileScreen() {
                         ) {
                             Column {
                                 Text(
-                                    text = "⏱️ Weekly Goal",
+                                    text = "Weekly Goal",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFFFD700),
@@ -416,41 +405,16 @@ fun EditProfileScreen() {
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(60.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = Color.Transparent
-                        ),
-                        shape = RoundedCornerShape(20.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    brush = Brush.horizontalGradient(
-                                        colors = listOf(
-                                            Color(0xFFFFD700),
-                                            Color(0xFFB88746),
-                                            Color(0xFF6C63FF)
-                                        )
-                                    ),
-                                    shape = RoundedCornerShape(20.dp)
-                                ),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                "✨ Save Changes",
-                                fontWeight = FontWeight.ExtraBold,
-                                fontSize = 18.sp,
-                                color = Color.Black,
-                                style = TextStyle(
-                                    shadow = androidx.compose.ui.graphics.Shadow(
-                                        color = Color.White.copy(alpha = 0.3f),
-                                        offset = androidx.compose.ui.geometry.Offset(0f, 1f),
-                                        blurRadius = 2f
-                                    )
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(
+                                brush = Brush.horizontalGradient(
+                                    colors = listOf(Color(0xFF8F5CFF), Color(0xFFB585FF))
                                 )
-                            )
-                        }
+                            ),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent)
+                    ) {
+                        Text("Save Changes", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                     
                     Spacer(modifier = Modifier.height(48.dp))

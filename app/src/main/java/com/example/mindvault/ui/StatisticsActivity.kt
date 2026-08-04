@@ -72,6 +72,15 @@ fun StatisticsScreen() {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     
+    // Load real screen time data from UsageStatsManager
+    val screenTimeSummary = remember { mutableStateOf(com.example.mindvault.data.ScreenTimeTracker.getTodayScreenTime(context)) }
+    val weeklyScreenTime = remember { mutableStateOf(com.example.mindvault.data.ScreenTimeTracker.getWeeklyScreenTime(context)) }
+    
+    // Refresh on resume
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { }
+    }
+    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -88,43 +97,23 @@ fun StatisticsScreen() {
         Column(
             modifier = Modifier.fillMaxSize()
         ) {
-            // Top App Bar with Glassmorphism effect
+            // Top App Bar
             TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Statistics",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                        
-
+                title = { Text("Statistics", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                     }
                 },
-                actions = {},
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                ),
-                modifier = Modifier
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = 0.1f),
-                                Color.White.copy(alpha = 0.05f)
-                            )
-                        ),
-                        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
-                    )
-                    .padding(horizontal = 16.dp)
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
+                )
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             // Tab Selector
-            // Glassmorphism Tab Selector
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,7 +166,7 @@ fun StatisticsScreen() {
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             // Content based on selected tab
             HorizontalPager(
@@ -193,19 +182,28 @@ fun StatisticsScreen() {
                         0 -> {
                             // Today Tab
                             item { HeroStatsCard(dailyStats, userStats) }
-                            
+                            item { ScreenTimeCard(screenTimeSummary.value) }
+                            item { 
+                                FocusVsPhoneCard(
+                                    focusMinutes = dailyStats?.totalFocusTime ?: 0L,
+                                    screenTimeMinutes = screenTimeSummary.value.totalScreenTimeMinutes,
+                                    distractionsBlocked = dailyStats?.distractionCount ?: 0,
+                                    productivityScore = StatisticsManager.getProductivityScore()
+                                )
+                            }
+                            item { AppUsageBreakdownCard(screenTimeSummary.value.topApps) }
                             item { StreakCalendarCard(userStats) }
                             item { LevelProgressCard(userStats) }
                         }
                         1 -> {
                             // Week Tab
                             item { WeeklyHeroStatsCard(weeklyStats, userStats) }
+                            item { WeeklyScreenTimeTrendCard(weeklyScreenTime.value) }
                             item { WeeklyBarChartSection(weeklyStats) }
                             item { StreakCalendarCard(userStats) }
-                            
                         }
                         2 -> {
-                            // Premium Analytics Tab
+                            // Analytics Tab
                             item { ProductivityTrendsCard(weeklyStats, userStats) }
                             item { FocusHeatmapCard(userStats) }
                             item { MonthlyProgressCard(userStats) }

@@ -19,7 +19,8 @@ enum class ScenarioVibe {
     ENCOURAGING,        // Studying at night
     MINDFUL_REFOCUS,    // Doomscrolling in day
     HIGH_ENERGY,        // Studying in day
-    REFLECTIVE_WINDDOWN // Idle at night
+    REFLECTIVE_WINDDOWN,// Idle at night
+    DAY_IDLE            // Idle in day
 }
 
 data class QuoteResult(
@@ -56,7 +57,8 @@ object QuoteEngine {
             isNight && isStudySessionActive -> ScenarioVibe.ENCOURAGING
             !isNight && isScrollingSocialMedia -> ScenarioVibe.MINDFUL_REFOCUS
             !isNight && isStudySessionActive -> ScenarioVibe.HIGH_ENERGY
-            else -> ScenarioVibe.REFLECTIVE_WINDDOWN
+            isNight -> ScenarioVibe.REFLECTIVE_WINDDOWN
+            else -> ScenarioVibe.DAY_IDLE
         }
 
         val quoteDirectories = when (vibe) {
@@ -65,6 +67,7 @@ object QuoteEngine {
             ScenarioVibe.MINDFUL_REFOCUS -> listOf("quotes/mindfulness_presence", "quotes/telegram_quotes.json")
             ScenarioVibe.HIGH_ENERGY -> listOf("quotes/focus_power")
             ScenarioVibe.REFLECTIVE_WINDDOWN -> listOf("quotes/resilience_healing")
+            ScenarioVibe.DAY_IDLE -> listOf("quotes/wisdom_philosophy", "quotes/telegram_quotes.json")
         }
 
         // Select a Font matching the vibe
@@ -74,6 +77,7 @@ object QuoteEngine {
             ScenarioVibe.MINDFUL_REFOCUS -> listOf("italiana_regular.ttf", "bodoni_moda_italic.ttf").random()
             ScenarioVibe.HIGH_ENERGY -> listOf("merriweather_bold_italic.ttf", "cormorant_garamond_italic.ttf").random()
             ScenarioVibe.REFLECTIVE_WINDDOWN -> listOf("caveat_semibold.ttf", "italiana_regular.ttf").random()
+            ScenarioVibe.DAY_IDLE -> listOf("cormorant_garamond_italic.ttf", "italiana_regular.ttf").random()
         }
 
         val allQuotes = mutableListOf<Quote>()

@@ -42,6 +42,23 @@ class HelpCenterActivity : ComponentActivity() {
 fun HelpCenterScreen() {
     val context = LocalContext.current
     
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Help Center", fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = { (context as? ComponentActivity)?.finish() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
+                )
+            )
+        },
+        containerColor = Color.Transparent
+    ) { padding ->
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -58,34 +75,10 @@ fun HelpCenterScreen() {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding(),
+                .padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = { /* Handle back */ }
-                    ) {
-                        Icon(
-                            Icons.Default.ArrowBack,
-                            contentDescription = "Back",
-                            tint = Color.White
-                        )
-                    }
-                    Text(
-                        text = "Help Center",
-                        color = Color.White,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
             
             item {
                 // Contact Form
@@ -107,6 +100,7 @@ fun HelpCenterScreen() {
                 FAQCard(faq)
             }
         }
+    }
     }
 }
 

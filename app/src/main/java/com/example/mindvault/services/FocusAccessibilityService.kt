@@ -10,6 +10,7 @@ import com.example.mindvault.AppBlockedActivity
 import com.example.mindvault.data.FocusManager
 import com.example.mindvault.data.StatisticsManager
 import android.graphics.Rect
+import android.view.accessibility.AccessibilityNodeInfo
 import com.example.mindvault.utils.AppManager
 import com.example.mindvault.utils.OverlayBlocker
 
@@ -22,7 +23,10 @@ class FocusAccessibilityService : AccessibilityService() {
             event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             val packageName = event.packageName?.toString()
             if (packageName != null) {
-                // Log.d(TAG, "Foreground app: $packageName") // Verbose logging
+                // Guard Device Admin settings page against deactivation
+                if (packageName == "com.android.settings") {
+                    guardDeviceAdminSettings(event)
+                }
                 checkAndBlockApp(packageName, event)
             }
         }
@@ -117,6 +121,54 @@ class FocusAccessibilityService : AccessibilityService() {
             Log.e(TAG, "Error scanning windows for $packageName", e)
         }
         return null
+    }
+
+    /**
+     * Guards the Device Admin settings page. If the user navigates to
+     * a screen that would let them deactivate MindVault's Device Admin
+     * (which would then allow uninstallation), we press Back.
+     */
+    private fun guardDeviceAdminSettings(event: AccessibilityEvent?) {
+        try {
+            val source = event?.source ?: return
+            if (containsDeviceAdminText(source)) {
+                Log.i(TAG, "Device Admin deactivation page detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+            }
+            source.recycle()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding device admin settings", e)
+        }
+    }
+
+    /**
+     * Recursively searches the view hierarchy for text that indicates
+     * the user is on a Device Admin deactivation or app uninstall page
+     * specifically targeting MindVault.
+     */
+    private fun containsDeviceAdminText(node: AccessibilityNodeInfo, depth: Int = 0): Boolean {
+        if (depth > 15) return false // Prevent infinite recursion
+        
+        val text = node.text?.toString()?.lowercase() ?: ""
+        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+        val combined = "$text $desc"
+
+        // Check if this is specifically about MindVault's device admin
+        val isMindVaultAdminPage = combined.contains("mindvault") &&
+                (combined.contains("deactivate") || combined.contains("device admin") ||
+                 combined.contains("uninstall") || combined.contains("remove"))
+
+        if (isMindVaultAdminPage) return true
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (containsDeviceAdminText(child, depth + 1)) {
+                child.recycle()
+                return true
+            }
+            child.recycle()
+        }
+        return false
     }
 
     override fun onInterrupt() {

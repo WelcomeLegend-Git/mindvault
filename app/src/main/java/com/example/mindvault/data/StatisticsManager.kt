@@ -609,7 +609,24 @@ object StatisticsManager {
     }
     
     fun getProductivityScore(): Float {
-        return 0f
+        val daily = _dailyStats.value ?: return 0f
+        val user = _userStats.value
+
+        // Focus time component (0-40 points): 240 min (4h) = max
+        val focusScore = (daily.totalFocusTime.toFloat() / 240f * 40f).coerceIn(0f, 40f)
+
+        // Session completion component (0-25 points)
+        val completionScore = if (daily.totalSessions > 0) {
+            (daily.completedSessions.toFloat() / daily.totalSessions.toFloat() * 25f)
+        } else 0f
+
+        // Distraction penalty component (25-0 points): 0 distractions = 25, 5+ = 0
+        val distractionScore = (25f - (daily.distractionCount * 5f)).coerceIn(0f, 25f)
+
+        // Streak bonus component (0-10 points)
+        val streakScore = ((user?.currentStreak ?: 0).toFloat() / 7f * 10f).coerceIn(0f, 10f)
+
+        return (focusScore + completionScore + distractionScore + streakScore).coerceIn(0f, 100f)
     }
 
     /**

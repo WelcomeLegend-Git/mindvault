@@ -30,6 +30,7 @@
         android:roundIcon="@drawable/mindvault_logo"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
+        android:resizeableActivity="false"
         android:theme="@style/Theme.MindVault">
         
         <activity
@@ -170,6 +171,20 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <receiver
+            android:name=".receivers.MindVaultDeviceAdminReceiver"
+            android:exported="false"
+            android:label="MindVault Uninstall Protection"
+            android:description="@string/app_name"
+            android:permission="android.permission.BIND_DEVICE_ADMIN">
+            <meta-data
+                android:name="android.app.device_admin"
+                android:resource="@xml/device_admin_policies" />
+            <intent-filter>
+                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
             </intent-filter>
         </receiver>
     </application>

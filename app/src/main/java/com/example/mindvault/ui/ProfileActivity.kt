@@ -92,14 +92,7 @@ fun ProfileScreen() {
         ) {
             // Top App Bar
             TopAppBar(
-                title = {
-                    Text(
-                        text = "Profile",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                },
+                title = { Text("Profile", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { (context as ProfileActivity).finish() }) {
                         Icon(
@@ -110,7 +103,8 @@ fun ProfileScreen() {
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
+                    containerColor = Color.Transparent,
+                    titleContentColor = Color.White
                 ),
                 actions = {
                     // The sync button was here. It has been removed because sync is now automatic.
