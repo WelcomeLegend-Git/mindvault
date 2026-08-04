@@ -4,13 +4,14 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStats
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.util.Log
 import java.util.Calendar
 
 /**
  * Queries UsageStatsManager for real device usage data.
- * Requires Usage Access permission.
+ * Uses event-based calculation to match Digital Wellbeing accuracy.
  */
 object ScreenTimeTracker {
 
@@ -28,7 +29,7 @@ object ScreenTimeTracker {
         val socialMediaMinutes: Long,
         val topApps: List<AppUsageInfo>,
         val unlockCount: Int,
-        val focusVsScreenRatio: Float // focusTime / screenTime (0-1)
+        val focusVsScreenRatio: Float
     )
 
     private val SOCIAL_APPS = setOf(
@@ -73,46 +74,130 @@ object ScreenTimeTracker {
         "com.google.android.keep"
     )
 
+    /**
+     * Compute today's screen time by walking usage EVENTS (foreground/background
+     * transitions). This matches Digital Wellbeing's approach and avoids the
+     * duplicate-bucket problem with queryUsageStats(INTERVAL_DAILY).
+     */
     fun getTodayScreenTime(context: Context): ScreenTimeSummary {
         val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             ?: return emptySummary()
 
-        val calendar = Calendar.getInstance()
-        val endTime = calendar.timeInMillis
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val startTime = calendar.timeInMillis
+        val now = System.currentTimeMillis()
+        val todayStart = todayMidnight()
 
-        // Get usage stats for today
-        val usageStatsList = usageStatsManager.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY, startTime, endTime
-        )
+        return computeScreenTime(context, usageStatsManager, todayStart, now)
+    }
 
-        if (usageStatsList.isNullOrEmpty()) return emptySummary()
+    /**
+     * Get daily screen time for the past 7 days.
+     */
+    fun getWeeklyScreenTime(context: Context): List<Pair<String, Long>> {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            ?: return emptyList()
 
+        val result = mutableListOf<Pair<String, Long>>()
+        val dayNames = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+
+        for (i in 6 downTo 0) {
+            val cal = Calendar.getInstance()
+            cal.add(Calendar.DAY_OF_YEAR, -i)
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
+            val dayName = dayNames[dayOfWeek]
+
+            // Set to midnight of that day
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+            val dayStart = cal.timeInMillis
+
+            // End is midnight of next day, or now for today
+            val calEnd = cal.clone() as Calendar
+            calEnd.add(Calendar.DAY_OF_YEAR, 1)
+            val dayEnd = if (i == 0) System.currentTimeMillis() else calEnd.timeInMillis
+
+            val summary = computeScreenTime(context, usageStatsManager, dayStart, dayEnd)
+            result.add(dayName to summary.totalScreenTimeMinutes)
+        }
+
+        return result
+    }
+
+    /**
+     * Core method: compute screen time from usage events between two timestamps.
+     * Tracks foreground→background transitions per app to get accurate durations.
+     */
+    private fun computeScreenTime(
+        context: Context,
+        usageStatsManager: UsageStatsManager,
+        startTime: Long,
+        endTime: Long
+    ): ScreenTimeSummary {
         val pm = context.packageManager
+
+        // Map: packageName → accumulated foreground millis
+        val appTimeMap = mutableMapOf<String, Long>()
+        // Map: packageName → timestamp when it last moved to foreground
+        val foregroundStart = mutableMapOf<String, Long>()
+
+        var unlockCount = 0
+
+        try {
+            val events = usageStatsManager.queryEvents(startTime, endTime)
+            val event = UsageEvents.Event()
+
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                val pkg = event.packageName ?: continue
+                val timestamp = event.timeStamp
+
+                when (event.eventType) {
+                    UsageEvents.Event.MOVE_TO_FOREGROUND,
+                    UsageEvents.Event.ACTIVITY_RESUMED -> {
+                        // App came to foreground
+                        foregroundStart[pkg] = timestamp
+                    }
+
+                    UsageEvents.Event.MOVE_TO_BACKGROUND,
+                    UsageEvents.Event.ACTIVITY_PAUSED -> {
+                        // App went to background — compute duration
+                        val start = foregroundStart.remove(pkg) ?: continue
+                        val duration = (timestamp - start).coerceAtLeast(0L)
+                        appTimeMap[pkg] = (appTimeMap[pkg] ?: 0L) + duration
+                    }
+
+                    UsageEvents.Event.KEYGUARD_HIDDEN -> {
+                        unlockCount++
+                    }
+                }
+            }
+
+            // For apps still in foreground (currently open), count up to endTime
+            for ((pkg, start) in foregroundStart) {
+                val duration = (endTime - start).coerceAtLeast(0L)
+                appTimeMap[pkg] = (appTimeMap[pkg] ?: 0L) + duration
+            }
+
+        } catch (e: Exception) {
+            Log.e("ScreenTimeTracker", "Error computing screen time from events", e)
+            return emptySummary()
+        }
+
+        // Build result, filtering system packages
         val appUsageList = mutableListOf<AppUsageInfo>()
         var totalScreenTime = 0L
         var socialMediaTime = 0L
 
-        // Filter and aggregate
-        for (stats in usageStatsList) {
-            val timeInForeground = stats.totalTimeInForeground
-            if (timeInForeground <= 0) continue
-
-            val packageName = stats.packageName
-
-            // Skip system/launcher packages
-            if (isSystemPackage(packageName)) continue
+        for ((packageName, timeMillis) in appTimeMap) {
+            if (timeMillis < 60_000L) continue // Skip < 1 minute
+            if (isSystemPackage(packageName, pm)) continue
 
             val appName = try {
                 val appInfo = pm.getApplicationInfo(packageName, 0)
                 pm.getApplicationLabel(appInfo).toString()
             } catch (e: PackageManager.NameNotFoundException) {
-                packageName.substringAfterLast('.')
-                    .replaceFirstChar { it.uppercase() }
+                packageName.substringAfterLast('.').replaceFirstChar { it.uppercase() }
             }
 
             val category = categorizeApp(packageName)
@@ -121,35 +206,28 @@ object ScreenTimeTracker {
                 AppUsageInfo(
                     packageName = packageName,
                     appName = appName,
-                    usageTimeMillis = timeInForeground,
+                    usageTimeMillis = timeMillis,
                     category = category
                 )
             )
 
-            totalScreenTime += timeInForeground
+            totalScreenTime += timeMillis
             if (category == AppCategory.SOCIAL) {
-                socialMediaTime += timeInForeground
+                socialMediaTime += timeMillis
             }
         }
 
-        // Sort by usage time, take top 8
-        val topApps = appUsageList
-            .sortedByDescending { it.usageTimeMillis }
-            .take(8)
+        val topApps = appUsageList.sortedByDescending { it.usageTimeMillis }.take(8)
 
-        // Count unlocks
-        val unlockCount = countUnlocks(usageStatsManager, startTime, endTime)
-
-        // Calculate focus ratio
         val focusMinutes = StatisticsManager.getTodayFocusTime()
-        val screenMinutes = totalScreenTime / 60000L
+        val screenMinutes = totalScreenTime / 60_000L
         val ratio = if (screenMinutes > 0) {
             (focusMinutes.toFloat() / screenMinutes.toFloat()).coerceIn(0f, 1f)
         } else 0f
 
         return ScreenTimeSummary(
-            totalScreenTimeMinutes = totalScreenTime / 60000L,
-            socialMediaMinutes = socialMediaTime / 60000L,
+            totalScreenTimeMinutes = totalScreenTime / 60_000L,
+            socialMediaMinutes = socialMediaTime / 60_000L,
             topApps = topApps,
             unlockCount = unlockCount,
             focusVsScreenRatio = ratio
@@ -157,63 +235,46 @@ object ScreenTimeTracker {
     }
 
     /**
-     * Get daily screen time for the past 7 days for weekly trends.
+     * Better system package detection — checks the ApplicationInfo flags
+     * and filters known system package prefixes.
      */
-    fun getWeeklyScreenTime(context: Context): List<Pair<String, Long>> {
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return emptyList()
+    private fun isSystemPackage(packageName: String, pm: PackageManager): Boolean {
+        // Known system prefixes to always exclude
+        if (packageName.startsWith("com.android.") ||
+            packageName.startsWith("android") ||
+            packageName.contains("launcher") ||
+            packageName.contains("systemui") ||
+            packageName.contains("permissioncontroller") ||
+            packageName.contains("inputmethod") ||
+            packageName.contains("wellbeing") ||
+            packageName == "com.google.android.packageinstaller" ||
+            packageName == "com.google.android.gms" ||
+            packageName == "com.google.android.gsf" ||
+            packageName == "com.google.android.ext.services" ||
+            packageName == "com.google.android.providers.media.module" ||
+            packageName == "com.google.android.documentsui" ||
+            packageName == "com.samsung.android.app.routines" ||
+            packageName == "com.samsung.android.dialer" ||
+            packageName == "com.sec.android.app.launcher"
+        ) return true
 
-        val result = mutableListOf<Pair<String, Long>>()
-        val calendar = Calendar.getInstance()
-        val dayNames = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-
-        for (i in 6 downTo 0) {
-            val cal = Calendar.getInstance()
-            cal.add(Calendar.DAY_OF_YEAR, -i)
-            val dayEnd = cal.timeInMillis
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            val dayStart = cal.timeInMillis
-
-            val stats = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY, dayStart, dayEnd
-            )
-
-            var totalMinutes = 0L
-            stats?.forEach { stat ->
-                if (!isSystemPackage(stat.packageName) && stat.totalTimeInForeground > 0) {
-                    totalMinutes += stat.totalTimeInForeground / 60000L
-                }
-            }
-
-            val dayName = dayNames[cal.get(Calendar.DAY_OF_WEEK) - 1]
-            result.add(dayName to totalMinutes)
-        }
-
-        return result
-    }
-
-    private fun countUnlocks(
-        usageStatsManager: UsageStatsManager,
-        startTime: Long,
-        endTime: Long
-    ): Int {
-        var count = 0
+        // Check the system flag — if it's a system app and not in our known lists,
+        // it's probably not user-facing screen time
         try {
-            val events = usageStatsManager.queryEvents(startTime, endTime)
-            val event = UsageEvents.Event()
-            while (events.hasNextEvent()) {
-                events.getNextEvent(event)
-                if (event.eventType == UsageEvents.Event.KEYGUARD_HIDDEN) {
-                    count++
-                }
+            val appInfo = pm.getApplicationInfo(packageName, 0)
+            val isSystem = (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            val isUpdatedSystem = (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+
+            // Allow updated system apps (like YouTube, Chrome, Play Store etc.)
+            // They are pre-installed but user-facing
+            if (isSystem && !isUpdatedSystem) {
+                return true
             }
-        } catch (e: Exception) {
-            Log.e("ScreenTimeTracker", "Error counting unlocks", e)
+        } catch (e: PackageManager.NameNotFoundException) {
+            return true // Can't resolve = skip
         }
-        return count
+
+        return false
     }
 
     private fun categorizeApp(packageName: String): AppCategory {
@@ -225,16 +286,13 @@ object ScreenTimeTracker {
         }
     }
 
-    private fun isSystemPackage(packageName: String): Boolean {
-        return packageName.startsWith("com.android.") ||
-                packageName.startsWith("android") ||
-                packageName == "com.google.android.inputmethod.latin" ||
-                packageName == "com.samsung.android.inputmethod" ||
-                packageName.contains("launcher") ||
-                packageName.contains("systemui") ||
-                packageName.contains("permissioncontroller") ||
-                packageName == "com.google.android.permissioncontroller" ||
-                packageName == "com.google.android.packageinstaller"
+    private fun todayMidnight(): Long {
+        val cal = Calendar.getInstance()
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.timeInMillis
     }
 
     private fun emptySummary(): ScreenTimeSummary {

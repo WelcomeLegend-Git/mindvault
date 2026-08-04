@@ -276,7 +276,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
         // MindVault content moved down
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(top = 30.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
