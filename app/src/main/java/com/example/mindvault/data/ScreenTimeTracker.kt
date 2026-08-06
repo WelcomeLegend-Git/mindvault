@@ -89,40 +89,7 @@ object ScreenTimeTracker {
         return computeScreenTime(context, usageStatsManager, todayStart, now)
     }
 
-    /**
-     * Get daily screen time for the past 7 days.
-     */
-    fun getWeeklyScreenTime(context: Context): List<Pair<String, Long>> {
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return emptyList()
 
-        val result = mutableListOf<Pair<String, Long>>()
-        val dayNames = arrayOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
-
-        for (i in 6 downTo 0) {
-            val cal = Calendar.getInstance()
-            cal.add(Calendar.DAY_OF_YEAR, -i)
-            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 1
-            val dayName = dayNames[dayOfWeek]
-
-            // Set to midnight of that day
-            cal.set(Calendar.HOUR_OF_DAY, 0)
-            cal.set(Calendar.MINUTE, 0)
-            cal.set(Calendar.SECOND, 0)
-            cal.set(Calendar.MILLISECOND, 0)
-            val dayStart = cal.timeInMillis
-
-            // End is midnight of next day, or now for today
-            val calEnd = cal.clone() as Calendar
-            calEnd.add(Calendar.DAY_OF_YEAR, 1)
-            val dayEnd = if (i == 0) System.currentTimeMillis() else calEnd.timeInMillis
-
-            val summary = computeScreenTime(context, usageStatsManager, dayStart, dayEnd)
-            result.add(dayName to summary.totalScreenTimeMinutes)
-        }
-
-        return result
-    }
 
     /**
      * Core method: compute screen time from usage events between two timestamps.

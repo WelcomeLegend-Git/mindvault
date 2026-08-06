@@ -516,7 +516,7 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
         }
     }
 
-    val allPermissionsGranted = hasOverlay && hasNotification && hasAccessibility && hasDeviceAdmin
+    val allPermissionsGranted = hasOverlay && hasNotification && hasAccessibility
     
     // Auto-collapse when all permissions are granted
     LaunchedEffect(allPermissionsGranted) {
@@ -602,10 +602,6 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
                         Spacer(modifier = Modifier.height(12.dp))
 
                         PermissionRow("Accessibility Service", hasAccessibility) { showAccessibilityDialog = true }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        PermissionRow("Uninstall Protection", hasDeviceAdmin) { showDeviceAdminDialog = true }
                     }
                 }
             }

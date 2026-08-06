@@ -23,9 +23,10 @@ class FocusAccessibilityService : AccessibilityService() {
             event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             val packageName = event.packageName?.toString()
             if (packageName != null) {
-                // Guard Device Admin settings page against deactivation
+                // Guard settings pages when Advanced Protection is on
                 if (packageName == "com.android.settings") {
                     guardDeviceAdminSettings(event)
+                    guardAccessibilitySettings(event)
                 }
                 checkAndBlockApp(packageName, event)
             }
@@ -142,6 +143,38 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     /**
+     * Guards the Accessibility Settings page when Advanced Protection is
+     * enabled. If the user opens the accessibility detail page for
+     * MindVault (where they could turn off the toggle), we press Back.
+     */
+    private fun guardAccessibilitySettings(event: AccessibilityEvent?) {
+        if (!isAdvancedProtectionEnabled()) return
+        try {
+            val source = event?.source ?: return
+            if (containsAccessibilityText(source)) {
+                Log.i(TAG, "Accessibility settings for MindVault detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+            }
+            source.recycle()
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding accessibility settings", e)
+        }
+    }
+
+    /**
+     * Checks if Advanced Protection is currently enabled (both Device Admin
+     * and Scroll Interruptions are active).
+     */
+    private fun isAdvancedProtectionEnabled(): Boolean {
+        return try {
+            val prefs = getSharedPreferences("mindvault_prefs", android.content.Context.MODE_PRIVATE)
+            prefs.getBoolean("advanced_protection_enabled", false)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
      * Recursively searches the view hierarchy for text that indicates
      * the user is on a Device Admin deactivation or app uninstall page
      * specifically targeting MindVault.
@@ -163,6 +196,37 @@ class FocusAccessibilityService : AccessibilityService() {
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
             if (containsDeviceAdminText(child, depth + 1)) {
+                child.recycle()
+                return true
+            }
+            child.recycle()
+        }
+        return false
+    }
+
+    /**
+     * Recursively searches for text indicating the user is on the
+     * Accessibility Service detail page for MindVault (where they
+     * could disable the toggle).
+     */
+    private fun containsAccessibilityText(node: AccessibilityNodeInfo, depth: Int = 0): Boolean {
+        if (depth > 15) return false
+        
+        val text = node.text?.toString()?.lowercase() ?: ""
+        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
+        val combined = "$text $desc"
+
+        // Detect the MindVault accessibility service detail page
+        // This page typically shows the app name + "use [service name]" toggle
+        val isMindVaultAccessibilityPage = combined.contains("mindvault") &&
+                (combined.contains("accessibility") || combined.contains("use mindvault") ||
+                 combined.contains("focus accessibility") || combined.contains("installed service"))
+
+        if (isMindVaultAccessibilityPage) return true
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            if (containsAccessibilityText(child, depth + 1)) {
                 child.recycle()
                 return true
             }

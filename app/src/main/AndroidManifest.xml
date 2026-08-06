@@ -108,6 +108,13 @@
             android:theme="@style/Theme.MindVault" />
 
         <activity
+            android:name=".ui.AdvancedProtectionActivity"
+            android:exported="false"
+            android:label="Advanced Protection"
+            android:theme="@style/Theme.MindVault"
+            android:resizeableActivity="false" />
+
+        <activity
             android:name=".ui.LockScreenActivity"
             android:exported="false"
             android:label="Lock Screen"

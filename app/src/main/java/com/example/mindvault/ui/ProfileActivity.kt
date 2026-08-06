@@ -598,6 +598,13 @@ fun SettingsSection() {
                     onClick = { context.startActivity(Intent(context, NotificationSettingsActivity::class.java)) }
                 )
                 
+                ProfileOptionItem(
+                    icon = Icons.Default.Shield,
+                    title = "Advanced Protection",
+                    subtitle = "Uninstall guard & scroll interruptions",
+                    onClick = { context.startActivity(Intent(context, AdvancedProtectionActivity::class.java)) }
+                )
+                
                 // Developer Section
                 ProfileOptionItem(
                     icon = Icons.Default.DeveloperMode,

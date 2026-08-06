@@ -354,20 +354,6 @@ fun NotificationSettingsScreen() {
                 Spacer(Modifier.height(16.dp))
             }
 
-            item {
-                PremiumNotificationToggle(
-                    icon = Icons.Filled.Timer,
-                    title = "Scroll Interruptions",
-                    subtitle = if (usageAccessGranted) {
-                        "A grounding reminder after about 15 minutes on social apps."
-                    } else {
-                        "Requires Usage access; only app name and time are checked."
-                    },
-                    checked = socialScrollRemindersEnabled,
-                    onCheckedChange = { handleSocialScrollReminderChange(it) }
-                )
-                Spacer(Modifier.height(16.dp))
-            }
 
             item {
                 PremiumNotificationToggle(

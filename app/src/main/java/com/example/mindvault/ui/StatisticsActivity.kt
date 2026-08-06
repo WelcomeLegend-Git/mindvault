@@ -72,14 +72,8 @@ fun StatisticsScreen() {
     val pagerState = rememberPagerState(pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
     
-    // Load real screen time data from UsageStatsManager
+    // Load real screen time data from UsageStatsManager (today only — historical events are unreliable)
     val screenTimeSummary = remember { mutableStateOf(com.example.mindvault.data.ScreenTimeTracker.getTodayScreenTime(context)) }
-    val weeklyScreenTime = remember { mutableStateOf(com.example.mindvault.data.ScreenTimeTracker.getWeeklyScreenTime(context)) }
-    
-    // Refresh on resume
-    androidx.compose.runtime.DisposableEffect(Unit) {
-        onDispose { }
-    }
     
     Box(
         modifier = Modifier
@@ -198,7 +192,7 @@ fun StatisticsScreen() {
                         1 -> {
                             // Week Tab
                             item { WeeklyHeroStatsCard(weeklyStats, userStats) }
-                            item { WeeklyScreenTimeTrendCard(weeklyScreenTime.value) }
+
                             item { WeeklyBarChartSection(weeklyStats) }
                             item { StreakCalendarCard(userStats) }
                         }
