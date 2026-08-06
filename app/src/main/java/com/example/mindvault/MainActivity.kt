@@ -74,6 +74,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mindvault.ui.theme.MindVaultTheme
 import com.example.mindvault.utils.AppManager
 import com.example.mindvault.utils.PermissionManager
+import com.example.mindvault.utils.UpdateChecker
 import com.example.mindvault.utils.UsageAccessManager
 import com.example.mindvault.receivers.MindVaultDeviceAdminReceiver
 import android.app.admin.DevicePolicyManager
@@ -109,6 +110,9 @@ class MainActivity : ComponentActivity() {
         
         // Show FocusManager initialization status
         Toast.makeText(this, "FocusManager Initialized: ${FocusManager.isInitialized()}", Toast.LENGTH_SHORT).show()
+
+        // Check for OTA updates
+        UpdateChecker.checkForUpdate(this)
 
         setContent {
         // The Accessibility Service is managed by the system and will run when enabled.

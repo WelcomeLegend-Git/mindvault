@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.mindvault"
         minSdk = 28
         targetSdk = 36
-        versionCode = 4
-        versionName = "3.1.0"
+        versionCode = 5
+        versionName = "3.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -53,7 +53,7 @@ dependencies {
     // implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0")
     // implementation("com.google.http-client:google-http-client-gson:1.43.3")
 
-    // Add Firestore dependency
+    // Firebase
     implementation("com.google.firebase:firebase-firestore-ktx:24.10.3")
     implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
 
