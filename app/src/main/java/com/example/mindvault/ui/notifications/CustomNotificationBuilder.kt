@@ -26,7 +26,7 @@ object CustomNotificationBuilder {
 
     private const val CHANNEL_ID = "mindvault_quotes_channel"
 
-    fun showQuoteNotification(context: Context, isStudySession: Boolean, isScrolling: Boolean) {
+    fun showQuoteNotification(context: Context, isStudySession: Boolean, isScrolling: Boolean): QuoteResult {
         val quoteResult = QuoteEngine.getQuoteForContext(context, isStudySession, isScrolling)
         
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -51,6 +51,7 @@ object CustomNotificationBuilder {
             .setAutoCancel(true)
 
         notificationManager.notify(System.currentTimeMillis().toInt(), builder.build())
+        return quoteResult
     }
 
     /**

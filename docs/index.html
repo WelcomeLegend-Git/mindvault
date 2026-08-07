@@ -3,78 +3,106 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindVault – Ultra-Premium Focus & Digital Wellbeing</title>
-    <meta name="description" content="Master your focus with MindVault. App blocking, scroll interruptions, unbreakable protection, and screen time analytics.">
+    <title>MindVault – Your Focus, Unbreakable</title>
+    <meta name="description" content="MindVault helps you stay focused, block distractions, and take control of your screen time. Download now for Android.">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" href="icon.webp">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-dark: #0F0F23;
-            --bg-card: rgba(26, 26, 46, 0.7);
-            --bg-card-hover: rgba(30, 30, 60, 0.85);
-            --accent-purple: #6C63FF;
-            --accent-purple-glow: rgba(108, 99, 255, 0.4);
-            --accent-gold: #FFD700;
-            --accent-gold-glow: rgba(255, 215, 0, 0.3);
-            --text-main: #FFFFFF;
-            --text-muted: rgba(255, 255, 255, 0.7);
-            --border-glass: rgba(255, 255, 255, 0.12);
+            --bg-dark: #08081A;
+            --bg-surface: rgba(20, 20, 45, 0.6);
+            --accent: #6C63FF;
+            --accent-light: #8B83FF;
+            --accent-glow: rgba(108, 99, 255, 0.35);
+            --gold: #FFD700;
+            --gold-soft: #FFECB3;
+            --cyan: #00E5FF;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.65);
+            --text-tertiary: rgba(255, 255, 255, 0.4);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-border-hover: rgba(108, 99, 255, 0.4);
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
 
         body {
-            font-family: 'Outfit', 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0F0F23 0%, #1A1A2E 50%, #16213E 100%);
-            color: var(--text-main);
+            font-family: 'Outfit', 'Inter', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
             min-height: 100vh;
             overflow-x: hidden;
             line-height: 1.6;
         }
 
-        /* Ambient Glow Objects */
-        .ambient-glow {
+        /* === AMBIENT BACKGROUND === */
+        .bg-effects {
             position: fixed;
-            border-radius: 50%;
-            filter: blur(120px);
+            inset: 0;
             z-index: 0;
             pointer-events: none;
+            overflow: hidden;
         }
-        .glow-1 {
-            top: -10%;
-            left: 20%;
-            width: 500px;
-            height: 500px;
-            background: rgba(108, 99, 255, 0.25);
+        .bg-effects::before {
+            content: '';
+            position: absolute;
+            top: -20%;
+            left: -10%;
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(108, 99, 255, 0.2) 0%, transparent 70%);
+            animation: float1 20s ease-in-out infinite;
         }
-        .glow-2 {
-            bottom: 10%;
-            right: 10%;
-            width: 450px;
-            height: 450px;
-            background: rgba(255, 215, 0, 0.15);
+        .bg-effects::after {
+            content: '';
+            position: absolute;
+            bottom: -15%;
+            right: -10%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.1) 0%, transparent 70%);
+            animation: float2 25s ease-in-out infinite;
+        }
+        @keyframes float1 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(60px, 40px); }
+        }
+        @keyframes float2 {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-50px, -30px); }
         }
 
-        /* Container */
+        /* Grid noise texture overlay */
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* === LAYOUT === */
         .container {
-            max-width: 1100px;
+            max-width: 1080px;
             margin: 0 auto;
             padding: 0 24px;
             position: relative;
             z-index: 1;
         }
 
-        /* Header / Navbar */
+        /* === HEADER === */
         header {
-            padding: 32px 0;
+            padding: 28px 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -83,262 +111,322 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 24px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            background: linear-gradient(90deg, #FFFFFF, #D1B1FF);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .logo-icon {
-            width: 42px;
-            height: 42px;
-            background: linear-gradient(135deg, var(--accent-purple), #4A4678);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 22px;
-            box-shadow: 0 8px 24px var(--accent-purple-glow);
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            color: #fff;
         }
-        .version-tag {
-            background: rgba(255, 215, 0, 0.15);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            color: var(--accent-gold);
-            padding: 4px 14px;
+        .logo img {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px var(--accent-glow);
+        }
+        .version-badge {
+            background: linear-gradient(135deg, rgba(108, 99, 255, 0.15), rgba(108, 99, 255, 0.05));
+            border: 1px solid rgba(108, 99, 255, 0.3);
+            color: var(--accent-light);
+            padding: 5px 14px;
             border-radius: 20px;
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             letter-spacing: 0.5px;
         }
 
-        /* Hero Section */
+        /* === HERO === */
         .hero {
             text-align: center;
-            padding: 60px 0 80px;
+            padding: 72px 0 80px;
         }
-        .hero-badge {
+        .hero-chip {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(108, 99, 255, 0.15);
-            border: 1px solid rgba(108, 99, 255, 0.3);
-            color: #D1B1FF;
-            padding: 8px 18px;
-            border-radius: 30px;
-            font-size: 14px;
+            background: rgba(108, 99, 255, 0.12);
+            border: 1px solid rgba(108, 99, 255, 0.25);
+            color: var(--accent-light);
+            padding: 8px 20px;
+            border-radius: 100px;
+            font-size: 13px;
             font-weight: 600;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
+            animation: fadeInUp 0.6s ease;
         }
         .hero-title {
-            font-size: 56px;
+            font-size: clamp(36px, 7vw, 60px);
             font-weight: 900;
-            line-height: 1.1;
+            line-height: 1.08;
             margin-bottom: 24px;
-            letter-spacing: -1.5px;
-            background: linear-gradient(180deg, #FFFFFF 0%, #E2D9FF 100%);
+            letter-spacing: -2px;
+            color: #FFFFFF;
+            animation: fadeInUp 0.7s ease 0.1s both;
+        }
+        .hero-title .highlight {
+            background: linear-gradient(90deg, var(--gold), #FFA500);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .hero-title span {
-            background: linear-gradient(90deg, var(--accent-gold), #FF9900);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .hero-subtitle {
-            font-size: 18px;
-            color: var(--text-muted);
-            max-width: 650px;
-            margin: 0 auto 40px;
+        .hero-desc {
+            font-size: 17px;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin: 0 auto 44px;
             font-weight: 400;
+            line-height: 1.7;
+            animation: fadeInUp 0.8s ease 0.2s both;
         }
 
-        /* Download Buttons */
-        .cta-group {
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* === DOWNLOAD CTA === */
+        .cta-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 16px;
+            gap: 14px;
+            animation: fadeInUp 0.9s ease 0.3s both;
         }
-        .btn-primary {
+        .btn-download {
             display: inline-flex;
             align-items: center;
-            gap: 14px;
-            background: linear-gradient(135deg, var(--accent-purple) 0%, #4E44CE 100%);
-            color: #FFFFFF;
+            gap: 12px;
+            background: linear-gradient(135deg, var(--accent), #4E44CE);
+            color: #fff;
             text-decoration: none;
-            padding: 18px 42px;
-            border-radius: 16px;
-            font-size: 18px;
+            padding: 16px 40px;
+            border-radius: 14px;
+            font-size: 17px;
             font-weight: 700;
-            box-shadow: 0 12px 36px var(--accent-purple-glow);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            letter-spacing: -0.2px;
+            box-shadow: 0 8px 32px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            cursor: pointer;
         }
-        .btn-primary:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 16px 44px rgba(108, 99, 255, 0.6);
-            background: linear-gradient(135deg, #7C74FF 0%, #5B51DE 100%);
+        .btn-download:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 12px 44px rgba(108, 99, 255, 0.55), inset 0 1px 0 rgba(255,255,255,0.25);
         }
-        .btn-subtext {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.5);
+        .btn-download:active {
+            transform: translateY(0) scale(0.98);
+        }
+        .btn-download svg {
+            flex-shrink: 0;
+        }
+        .cta-meta {
             display: flex;
             align-items: center;
             gap: 16px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            font-weight: 500;
         }
+        .cta-meta span { display: flex; align-items: center; gap: 5px; }
 
-        /* Features Grid */
+        /* === FEATURES === */
         .features {
-            padding: 60px 0 100px;
+            padding: 40px 0 80px;
         }
-        .section-header {
+        .section-label {
             text-align: center;
-            margin-bottom: 50px;
+            margin-bottom: 48px;
         }
-        .section-title {
-            font-size: 36px;
+        .section-label h2 {
+            font-size: 32px;
             font-weight: 800;
-            margin-bottom: 12px;
+            letter-spacing: -0.8px;
+            margin-bottom: 10px;
         }
-        .section-desc {
-            color: var(--text-muted);
-            font-size: 16px;
+        .section-label p {
+            color: var(--text-secondary);
+            font-size: 15px;
+            max-width: 480px;
+            margin: 0 auto;
         }
 
-        .grid {
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1f));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
         }
-        .card {
-            background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--border-glass);
-            border-radius: 24px;
-            padding: 32px;
-            transition: all 0.3s ease;
+        .feature-card {
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            padding: 28px;
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
         }
-        .card:hover {
-            background: var(--bg-card-hover);
-            transform: translateY(-5px);
-            border-color: rgba(108, 99, 255, 0.4);
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
-        .card-icon {
-            width: 54px;
-            height: 54px;
-            border-radius: 16px;
-            background: rgba(108, 99, 255, 0.15);
-            border: 1px solid rgba(108, 99, 255, 0.3);
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--glass-border-hover);
+            box-shadow: 0 20px 48px rgba(0, 0, 0, 0.4);
+        }
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 26px;
-            margin-bottom: 20px;
+            font-size: 24px;
+            margin-bottom: 18px;
         }
-        .card-title {
-            font-size: 20px;
+        .feature-icon.purple { background: rgba(108, 99, 255, 0.15); border: 1px solid rgba(108, 99, 255, 0.25); }
+        .feature-icon.gold { background: rgba(255, 215, 0, 0.12); border: 1px solid rgba(255, 215, 0, 0.2); }
+        .feature-icon.cyan { background: rgba(0, 229, 255, 0.1); border: 1px solid rgba(0, 229, 255, 0.2); }
+        .feature-icon.green { background: rgba(76, 175, 80, 0.12); border: 1px solid rgba(76, 175, 80, 0.2); }
+        .feature-icon.red { background: rgba(255, 107, 107, 0.12); border: 1px solid rgba(255, 107, 107, 0.2); }
+        .feature-icon.orange { background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.2); }
+
+        .feature-card h3 {
+            font-size: 18px;
             font-weight: 700;
-            margin-bottom: 10px;
-            color: #FFFFFF;
+            margin-bottom: 8px;
+            color: #fff;
         }
-        .card-desc {
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* === INSTALL SECTION === */
+        .install {
+            margin-bottom: 80px;
+        }
+        .install-card {
+            background: linear-gradient(135deg, rgba(108, 99, 255, 0.08), rgba(20, 20, 45, 0.5));
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 40px;
+        }
+        .install-card h2 {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+        .install-card > p {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-bottom: 32px;
+        }
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #4E44CE);
+            color: #fff;
+            font-weight: 800;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px var(--accent-glow);
+        }
+        .step-item h4 {
             font-size: 15px;
-            color: var(--text-muted);
+            font-weight: 700;
+        }
+        .step-item p {
+            font-size: 13px;
+            color: var(--text-secondary);
             line-height: 1.5;
         }
 
-        /* How to Install */
-        .install-section {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-glass);
-            border-radius: 32px;
-            padding: 48px;
-            margin-bottom: 80px;
-        }
-        .install-steps {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 24px;
-            margin-top: 32px;
-        }
-        .step {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .step-num {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background: var(--accent-gold);
-            color: #000;
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .step-title {
-            font-weight: 700;
-            font-size: 16px;
-        }
-        .step-desc {
-            font-size: 14px;
-            color: var(--text-muted);
-        }
-
-        /* Footer */
+        /* === FOOTER === */
         footer {
-            border-top: 1px solid var(--border-glass);
-            padding: 40px 0;
+            border-top: 1px solid var(--glass-border);
+            padding: 32px 0;
             text-align: center;
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 14px;
+        }
+        footer p {
+            font-size: 13px;
+            color: var(--text-tertiary);
+        }
+        footer a {
+            color: var(--accent-light);
+            text-decoration: none;
         }
 
+        /* === RESPONSIVE === */
         @media (max-width: 768px) {
-            .hero-title {
-                font-size: 38px;
-            }
-            .install-section {
-                padding: 24px;
-            }
+            .hero { padding: 48px 0 56px; }
+            .hero-title { letter-spacing: -1px; }
+            .hero-desc { font-size: 15px; }
+            .btn-download { padding: 14px 28px; font-size: 15px; }
+            .install-card { padding: 24px; }
+            .features-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="ambient-glow glow-1"></div>
-    <div class="ambient-glow glow-2"></div>
+    <div class="bg-effects"></div>
+    <div class="noise-overlay"></div>
 
     <div class="container">
         <!-- Header -->
         <header>
             <div class="logo">
-                <div class="logo-icon">⚡</div>
+                <img src="icon_square.webp" alt="MindVault Icon">
                 MindVault
             </div>
-            <div class="version-tag">v3.2.1 Release</div>
+            <div class="version-badge">v3.2.2</div>
         </header>
 
         <!-- Hero -->
         <section class="hero">
-            <div class="hero-badge">✨ Next-Gen Focus & Anti-Distraction Suite</div>
-            <h1 class="hero-title">Take Back Control of Your <span>Attention Span</span></h1>
-            <p class="hero-subtitle">
-                MindVault combines deep focus session timers, scroll interruption guards, unbreakable protection, and real-time screen time analytics.
+            <div class="hero-chip">✨ Focus & Anti-Distraction Suite</div>
+            <h1 class="hero-title">
+                Take Back Control<br>
+                of Your <span class="highlight">Attention Span</span>
+            </h1>
+            <p class="hero-desc">
+                Block distracting apps, get grounding reminders when you scroll too long, and protect your focus with unbreakable session timers — all in one beautifully designed app.
             </p>
-            
-            <div class="cta-group">
-                <a href="https://raw.githubusercontent.com/WelcomeLegend-Git/mindvault/main/docs/mindvault-v3.2.1.apk" class="btn-primary" id="downloadBtn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    Download MindVault v3.2.1 (APK)
+
+            <div class="cta-wrapper">
+                <a href="https://raw.githubusercontent.com/WelcomeLegend-Git/mindvault/main/docs/mindvault-v3.2.2.apk" class="btn-download" id="downloadBtn">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Download v3.2.2 (APK)
                 </a>
-                <div class="btn-subtext">
-                    <span>📦 Direct APK Download</span>
+                <div class="cta-meta">
+                    <span>📦 Direct Download</span>
                     <span>•</span>
-                    <span>🛡️ Safe & Open Source</span>
+                    <span>🛡️ Open Source</span>
                     <span>•</span>
                     <span>Android 9.0+</span>
                 </div>
@@ -347,80 +435,83 @@
 
         <!-- Features -->
         <section class="features">
-            <div class="section-header">
-                <h2 class="section-title">Built for Unstoppable Focus</h2>
-                <p class="section-desc">Designed with an ultra-premium aesthetic and powerful system-level guards.</p>
+            <div class="section-label">
+                <h2>Everything You Need to Stay Focused</h2>
+                <p>Simple, powerful tools that actually help you put your phone down and get things done.</p>
             </div>
 
-            <div class="grid">
-                <div class="card">
-                    <div class="card-icon">🛡️</div>
-                    <h3 class="card-title">Advanced Protection</h3>
-                    <p class="card-desc">Prevents app uninstallation via Device Admin and auto-blocks attempts to turn off accessibility permissions when locked.</p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon purple">🎯</div>
+                    <h3>Block Distracting Apps</h3>
+                    <p>Choose the apps that waste your time — Instagram, YouTube, games — and MindVault blocks them during your focus sessions. No cheating allowed.</p>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">⏳</div>
-                    <h3 class="card-title">Scroll Interruptions</h3>
-                    <p class="card-desc">Detects mindless social media scrolling (~15 min) and triggers a full-screen grounding prompt to snap you back to reality.</p>
+                <div class="feature-card">
+                    <div class="feature-icon gold">⏳</div>
+                    <h3>Scroll Reminders</h3>
+                    <p>Been doom-scrolling for 15 minutes? MindVault gently interrupts you with a full-screen prompt to take a breath and refocus on what matters.</p>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">📊</div>
-                    <h3 class="card-title">Real Screen Time Stats</h3>
-                    <p class="card-desc">Accurate, event-driven foreground usage stats matching Android Digital Wellbeing precision, without duplicate counting.</p>
+                <div class="feature-card">
+                    <div class="feature-icon cyan">📊</div>
+                    <h3>See Your Screen Time</h3>
+                    <p>Get accurate, real-time stats on how much time you spend on each app. Spot your habits, track your progress, and watch your screen time drop.</p>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">🎯</div>
-                    <h3 class="card-title">Focus Mode Sessions</h3>
-                    <p class="card-desc">Block distracting apps and vendor floating windows during active focus slots to maintain deep work flow.</p>
+                <div class="feature-card">
+                    <div class="feature-icon green">🛡️</div>
+                    <h3>Unbreakable Protection</h3>
+                    <p>Once you start a focus session, you can't just disable MindVault to cheat. The app guards itself from being turned off or uninstalled during active sessions.</p>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">🚀</div>
-                    <h3 class="card-title">Over-The-Air (OTA) Updates</h3>
-                    <p class="card-desc">Stay updated automatically. MindVault checks for new versions on launch and prompts seamless 1-tap updates.</p>
+                <div class="feature-card">
+                    <div class="feature-icon red">🔥</div>
+                    <h3>Daily Motivation & Streaks</h3>
+                    <p>Start each day with a beautiful, hand-picked motivational quote delivered to your notifications. Build a streak by staying focused every day.</p>
                 </div>
 
-                <div class="card">
-                    <div class="card-icon">🔥</div>
-                    <h3 class="card-title">Daily Motivation & Streaks</h3>
-                    <p class="card-desc">Track your daily focus streaks and receive unique, curated quotes every single day to stay inspired.</p>
+                <div class="feature-card">
+                    <div class="feature-icon orange">🚀</div>
+                    <h3>Always Up-to-Date</h3>
+                    <p>MindVault automatically checks for new versions and lets you update with a single tap — no app store needed. You'll always have the latest features.</p>
                 </div>
             </div>
         </section>
 
-        <!-- How to Install -->
-        <section class="install-section">
-            <h2 class="section-title" style="font-size: 28px;">Quick Installation Guide</h2>
-            <div class="install-steps">
-                <div class="step">
-                    <div class="step-num">1</div>
-                    <div class="step-title">Download APK</div>
-                    <div class="step-desc">Tap the download button above to save the MindVault APK file.</div>
-                </div>
-                <div class="step">
-                    <div class="step-num">2</div>
-                    <div class="step-title">Allow Unknown Apps</div>
-                    <div class="step-desc">When prompted by your browser, tap Settings and allow installation from this source.</div>
-                </div>
-                <div class="step">
-                    <div class="step-num">3</div>
-                    <div class="step-title">Install & Open</div>
-                    <div class="step-desc">Open the downloaded file and tap Install. Launch MindVault to get started.</div>
-                </div>
-                <div class="step">
-                    <div class="step-num">4</div>
-                    <div class="step-title">Grant Permissions</div>
-                    <div class="step-desc">Follow the in-app setup cards for Usage Access and Accessibility for full protection.</div>
+        <!-- Install Guide -->
+        <section class="install">
+            <div class="install-card">
+                <h2>📲 How to Install</h2>
+                <p>It only takes a minute to get started.</p>
+                <div class="steps">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <h4>Download the APK</h4>
+                        <p>Tap the download button above. Your browser will save the file.</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <h4>Allow Installation</h4>
+                        <p>If prompted, tap "Settings" and enable "Allow from this source."</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <h4>Install & Open</h4>
+                        <p>Open the downloaded file and tap "Install." Launch MindVault when done.</p>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">4</div>
+                        <h4>Set Up Permissions</h4>
+                        <p>Follow the simple setup cards inside the app to enable all features.</p>
+                    </div>
                 </div>
             </div>
         </section>
 
         <!-- Footer -->
         <footer>
-            <p>© 2026 MindVault. Open source, privacy-focused productivity tool.</p>
+            <p>© 2026 MindVault — Built with ❤️ for people who want to take back their time. <a href="https://github.com/WelcomeLegend-Git/mindvault">GitHub</a></p>
         </footer>
     </div>
 </body>

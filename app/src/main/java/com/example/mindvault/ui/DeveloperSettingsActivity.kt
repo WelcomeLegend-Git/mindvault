@@ -25,7 +25,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.mindvault.engine.QuoteEngine
 import com.example.mindvault.engine.ScenarioVibe
 import com.example.mindvault.ui.theme.MindVaultTheme
 
@@ -185,19 +184,14 @@ fun DeveloperSettingsScreen(onBack: () -> Unit) {
                         .fillMaxWidth()
                         .padding(vertical = 4.dp)
                         .clickable {
-                            // Fire the actual notification
-                            com.example.mindvault.ui.notifications.CustomNotificationBuilder.showQuoteNotification(
+                            // Fire the actual notification and get the result
+                            val result = com.example.mindvault.ui.notifications.CustomNotificationBuilder.showQuoteNotification(
                                 context = context,
                                 isStudySession = isStudy,
                                 isScrolling = isScroll
                             )
 
-                            // Get the quote result for preview display
-                            val result = QuoteEngine.getQuoteForContext(
-                                context = context,
-                                isStudySessionActive = isStudy,
-                                isScrollingSocialMedia = isScroll
-                            )
+                            // Display the same quote that was sent in the notification
                             lastResult = "\"${result.quote.q}\"\n— ${result.quote.a}\n\n" +
                                     "Vibe: ${result.vibe.name}\nFont: ${result.fontFileName}"
                             deckStatsRefresh++

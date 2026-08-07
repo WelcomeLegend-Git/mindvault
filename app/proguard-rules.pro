@@ -39,3 +39,8 @@
 # Keep data model classes so Gson can serialize/deserialize them perfectly
 -keep class com.example.mindvault.model.** { *; }
 -keepclassmembers class com.example.mindvault.model.** { *; }
+
+# Keep Quote engine data classes (Quote, QuoteResult, ScenarioVibe) for Gson
+-keep class com.example.mindvault.engine.Quote { *; }
+-keep class com.example.mindvault.engine.QuoteResult { *; }
+-keep class com.example.mindvault.engine.ScenarioVibe { *; }
