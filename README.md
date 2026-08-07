@@ -5,7 +5,7 @@
   </p>
   <p align="center">
     <a href="https://welcomelegend-git.github.io/mindvault/"><img src="https://img.shields.io/badge/🌐_Web_Landing_Page-Download_Here-6C63FF?style=for-the-badge" alt="Landing Page"></a>
-    <a href="https://github.com/WelcomeLegend-Git/mindvault/releases/latest"><img src="https://img.shields.io/badge/📱_Download_APK-v3.2.0-FFD700?style=for-the-badge" alt="Latest Release"></a>
+    <a href="https://github.com/WelcomeLegend-Git/mindvault/releases/latest"><img src="https://img.shields.io/badge/📱_Download_APK-v3.2.1-FFD700?style=for-the-badge" alt="Latest Release"></a>
   </p>
 </p>
 

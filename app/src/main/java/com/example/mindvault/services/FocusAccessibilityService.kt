@@ -128,8 +128,14 @@ class FocusAccessibilityService : AccessibilityService() {
      * Guards the Device Admin settings page. If the user navigates to
      * a screen that would let them deactivate MindVault's Device Admin
      * (which would then allow uninstallation), we press Back.
+     *
+     * Only guards when:
+     * 1. Advanced Protection is enabled, AND
+     * 2. Device Admin is currently active (so we block deactivation, not activation)
      */
     private fun guardDeviceAdminSettings(event: AccessibilityEvent?) {
+        if (!isAdvancedProtectionEnabled()) return
+        if (!isDeviceAdminCurrentlyActive()) return
         try {
             val source = event?.source ?: return
             if (containsDeviceAdminText(source)) {
@@ -139,6 +145,19 @@ class FocusAccessibilityService : AccessibilityService() {
             source.recycle()
         } catch (e: Exception) {
             Log.e(TAG, "Error guarding device admin settings", e)
+        }
+    }
+
+    /**
+     * Checks if MindVault's Device Admin is currently active.
+     */
+    private fun isDeviceAdminCurrentlyActive(): Boolean {
+        return try {
+            val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+            val adminComponent = android.content.ComponentName(this, com.example.mindvault.receivers.MindVaultDeviceAdminReceiver::class.java)
+            dpm.isAdminActive(adminComponent)
+        } catch (_: Exception) {
+            false
         }
     }
 

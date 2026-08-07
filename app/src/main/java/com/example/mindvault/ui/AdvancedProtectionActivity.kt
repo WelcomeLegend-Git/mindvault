@@ -5,13 +5,20 @@ import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -28,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
@@ -265,6 +273,12 @@ fun AdvancedProtectionScreen() {
                 onCheckedChange = { handleDeviceAdminToggle(it) }
             )
 
+            // Help guide for restricted settings (Android 13+)
+            if (!deviceAdminEnabled) {
+                Spacer(Modifier.height(8.dp))
+                RestrictedSettingsHelpCard(context)
+            }
+
             Spacer(Modifier.height(16.dp))
 
             // Scroll Interruptions Toggle
@@ -281,6 +295,161 @@ fun AdvancedProtectionScreen() {
             )
 
             Spacer(Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun RestrictedSettingsHelpCard(context: Context) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFFFA500).copy(alpha = 0.08f)
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+        ) {
+            // Clickable header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.HelpOutline,
+                    contentDescription = null,
+                    tint = Color(0xFFFFA500),
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Having trouble enabling this?",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFFFA500),
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = Color(0xFFFFA500),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            // Expandable guide
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column(
+                    modifier = Modifier.padding(top = 12.dp)
+                ) {
+                    Text(
+                        text = "On Android 13 and above, apps installed from sources other than the Play Store have restricted permissions by default. You need to allow restricted settings first:",
+                        fontSize = 12.sp,
+                        color = Color.White.copy(alpha = 0.7f),
+                        lineHeight = 18.sp
+                    )
+
+                    Spacer(Modifier.height(12.dp))
+
+                    // Steps
+                    val steps = listOf(
+                        "Open your device Settings app.",
+                        "Go to Apps → See all apps → find MindVault.",
+                        "Tap the ⋮ (three dots) in the top-right corner.",
+                        "Tap \"Allow restricted settings\".",
+                        "Verify with your PIN or fingerprint.",
+                        "Come back here and turn on Uninstall Protection."
+                    )
+
+                    steps.forEachIndexed { index, step ->
+                        Row(
+                            modifier = Modifier.padding(bottom = 8.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            // Step number bubble
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .background(
+                                        color = Color(0xFF6C63FF).copy(alpha = 0.3f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${index + 1}",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB8B0FF)
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = step,
+                                fontSize = 12.sp,
+                                color = Color.White.copy(alpha = 0.8f),
+                                lineHeight = 17.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    // Quick action button
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.parse("package:${context.packageName}")
+                                    }
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {}
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = Color(0xFF6C63FF)
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF6C63FF).copy(alpha = 0.5f))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.OpenInNew,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Open MindVault App Info",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(Modifier.height(6.dp))
+
+                        Text(
+                            text = "Tap ⋮ (three dots) → Allow restricted settings",
+                            fontSize = 11.sp,
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -794,7 +794,7 @@ fun HelpSupportSection() {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, "MindVault – Focus & Productivity")
-                    putExtra(Intent.EXTRA_TEXT, "Unlock deep focus with MindVault – the ultra-premium productivity app. Download now: https://play.google.com/store/apps/details?id=${context.packageName}")
+                    putExtra(Intent.EXTRA_TEXT, "Unlock deep focus with MindVault – the ultra-premium productivity app. Download now: https://welcomelegend-git.github.io/mindvault/")
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Share MindVault"))
             }
