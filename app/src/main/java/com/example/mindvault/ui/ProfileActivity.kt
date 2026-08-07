@@ -604,6 +604,13 @@ fun SettingsSection() {
                     subtitle = "Uninstall guard & scroll interruptions",
                     onClick = { context.startActivity(Intent(context, AdvancedProtectionActivity::class.java)) }
                 )
+
+                ProfileOptionItem(
+                    icon = Icons.Default.AppSettingsAlt,
+                    title = "App Compatibility",
+                    subtitle = "Manage apps that conflict with Accessibility",
+                    onClick = { context.startActivity(Intent(context, AppCompatibilityActivity::class.java)) }
+                )
                 
                 // Developer Section
                 ProfileOptionItem(

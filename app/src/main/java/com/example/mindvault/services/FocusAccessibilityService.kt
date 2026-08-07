@@ -12,26 +12,303 @@ import com.example.mindvault.data.StatisticsManager
 import android.graphics.Rect
 import android.view.accessibility.AccessibilityNodeInfo
 import com.example.mindvault.utils.AppManager
+import com.example.mindvault.utils.AppCompatibilityManager
 import com.example.mindvault.utils.OverlayBlocker
+import com.example.mindvault.ui.notifications.CustomNotificationBuilder
 
 class FocusAccessibilityService : AccessibilityService() {
 
     private val TAG = "FocusAccessibilityService"
+
+    /**
+     * Packages that can trigger uninstall flows we need to guard against.
+     */
+    private val SETTINGS_PACKAGES = setOf(
+        "com.android.settings",
+        "com.android.settings.intelligence"
+    )
+    private val INSTALLER_PACKAGES = setOf(
+        "com.google.android.packageinstaller",
+        "com.android.packageinstaller",
+        "com.samsung.android.packageinstaller"
+    )
+    private val PLAY_STORE_PACKAGE = "com.android.vending"
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
             event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
             val packageName = event.packageName?.toString()
             if (packageName != null) {
-                // Guard settings pages when Advanced Protection is on
-                if (packageName == "com.android.settings") {
-                    guardDeviceAdminSettings(event)
-                    guardAccessibilitySettings(event)
+
+                // ------ COMPATIBILITY APP CHECK ------
+                // If this app is in the compatibility list AND Focus Mode is NOT active,
+                // disable the accessibility service so the app can function normally.
+                // SAFETY: This NEVER runs during Focus Mode.
+                if (checkAndDisableForCompatibility(packageName)) return
+
+                // ------ SELF-PROTECTION GUARDS ------
+                // These guards activate when Focus Mode is active OR Advanced Protection is on
+                if (shouldGuardSelf()) {
+                    // Guard 1: Settings app — block App Info, Device Admin, Accessibility pages
+                    if (packageName in SETTINGS_PACKAGES) {
+                        if (guardMindVaultAppInfo(event)) return
+                        if (guardDeviceAdminSettings(event)) return
+                        if (guardAccessibilitySettings(event)) return
+                    }
+
+                    // Guard 2: Package Installer — block uninstall confirmation dialogs
+                    if (packageName in INSTALLER_PACKAGES) {
+                        if (guardUninstallDialog(event)) return
+                    }
+
+                    // Guard 3: Play Store — block MindVault's Play Store page
+                    if (packageName == PLAY_STORE_PACKAGE) {
+                        if (guardPlayStore(event)) return
+                    }
                 }
+
+                // ------ APP BLOCKING ------
                 checkAndBlockApp(packageName, event)
             }
         }
     }
+
+    // ========================== COMPATIBILITY ==========================
+
+    /**
+     * Checks if the current foreground app is in the user's compatibility list
+     * (e.g., banking apps). If so, AND Focus Mode is NOT active, the service
+     * disables itself so the app can function normally.
+     *
+     * Returns true if the service disabled itself (caller should return immediately).
+     */
+    private fun checkAndDisableForCompatibility(packageName: String): Boolean {
+        // SAFETY: Never disable during Focus Mode
+        val focusActive = try {
+            FocusManager.isInitialized() && FocusManager.isFocusModeActive()
+        } catch (_: Exception) { false }
+        if (focusActive) return false
+
+        // Check if this app is in the compatibility list
+        if (!AppCompatibilityManager.isCompatibilityApp(packageName, this)) return false
+
+        Log.i(TAG, "COMPAT: Compatibility app detected ($packageName) — disabling Accessibility Service")
+
+        // Mark that we auto-disabled (for the re-enable popup in MainActivity)
+        AppCompatibilityManager.markAutoDisabled(true)
+
+        // Send notification reminding user to re-enable
+        try {
+            CustomNotificationBuilder.showCompatibilityDisabledNotification(this)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to send compatibility notification", e)
+        }
+
+        // Disable self — this is a real Android API on API 24+
+        disableSelf()
+        return true
+    }
+
+    // ========================== SELF-PROTECTION ==========================
+
+    /**
+     * Determines if self-protection guards should be active.
+     * Guards activate when EITHER:
+     * 1. Focus Mode is currently running (always protect during sessions), OR
+     * 2. Advanced Protection toggle is explicitly enabled
+     */
+    private fun shouldGuardSelf(): Boolean {
+        val focusActive = try {
+            FocusManager.isInitialized() && FocusManager.isFocusModeActive()
+        } catch (_: Exception) { false }
+
+        return focusActive || isAdvancedProtectionEnabled()
+    }
+
+    /**
+     * Blocks the user from reaching MindVault's App Info page in Settings
+     * during a protected session. This prevents the uninstall flow entirely.
+     *
+     * Uses two-pass scanning: first collects ALL text on screen, then checks
+     * if the page is about MindVault + has dangerous actions.
+     */
+    private fun guardMindVaultAppInfo(event: AccessibilityEvent?): Boolean {
+        try {
+            val source = event?.source ?: return false
+            val allText = collectAllText(source)
+            source.recycle()
+
+            val hasMindVault = allText.contains("mindvault") ||
+                    allText.contains("com.example.mindvault")
+
+            if (!hasMindVault) return false
+
+            // If we're on a page that mentions MindVault AND has dangerous actions
+            val hasDangerousAction = allText.contains("uninstall") ||
+                    allText.contains("force stop") ||
+                    allText.contains("force-stop") ||
+                    allText.contains("disable") ||
+                    allText.contains("app info")
+
+            if (hasDangerousAction) {
+                Log.i(TAG, "GUARD: MindVault App Info page detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding app info", e)
+        }
+        return false
+    }
+
+    /**
+     * Guards the Device Admin settings page. Uses two-pass text collection
+     * so that "MindVault" and "Deactivate" can be in different text nodes.
+     *
+     * Only blocks deactivation (not activation).
+     */
+    private fun guardDeviceAdminSettings(event: AccessibilityEvent?): Boolean {
+        if (!isDeviceAdminCurrentlyActive()) return false
+        try {
+            val source = event?.source ?: return false
+            val allText = collectAllText(source)
+            source.recycle()
+
+            val hasMindVault = allText.contains("mindvault") ||
+                    allText.contains("com.example.mindvault")
+
+            if (!hasMindVault) return false
+
+            val hasAdminAction = allText.contains("deactivate") ||
+                    allText.contains("device admin") ||
+                    allText.contains("remove this device admin") ||
+                    allText.contains("deactivate this device admin")
+
+            if (hasAdminAction) {
+                Log.i(TAG, "GUARD: Device Admin deactivation page detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding device admin settings", e)
+        }
+        return false
+    }
+
+    /**
+     * Guards the Accessibility Settings page for MindVault. Prevents the user
+     * from reaching the toggle to disable MindVault's accessibility service.
+     */
+    private fun guardAccessibilitySettings(event: AccessibilityEvent?): Boolean {
+        try {
+            val source = event?.source ?: return false
+            val allText = collectAllText(source)
+            source.recycle()
+
+            val hasMindVault = allText.contains("mindvault") ||
+                    allText.contains("focus accessibility") ||
+                    allText.contains("mindvault focus service")
+
+            if (!hasMindVault) return false
+
+            val hasAccessibilityContext = allText.contains("accessibility") ||
+                    allText.contains("use mindvault") ||
+                    allText.contains("installed service") ||
+                    allText.contains("shortcut") ||
+                    allText.contains("downloaded apps")
+
+            if (hasAccessibilityContext) {
+                Log.i(TAG, "GUARD: Accessibility settings for MindVault detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding accessibility settings", e)
+        }
+        return false
+    }
+
+    /**
+     * Guards the system uninstall confirmation dialog. When Android shows
+     * "Do you want to uninstall this app?", we block it if it's about MindVault.
+     */
+    private fun guardUninstallDialog(event: AccessibilityEvent?): Boolean {
+        try {
+            val source = event?.source ?: return false
+            val allText = collectAllText(source)
+            source.recycle()
+
+            val hasMindVault = allText.contains("mindvault") ||
+                    allText.contains("com.example.mindvault")
+
+            if (!hasMindVault) return false
+
+            val hasUninstallAction = allText.contains("uninstall") ||
+                    allText.contains("do you want to") ||
+                    allText.contains("remove") ||
+                    allText.contains("deactivate")
+
+            if (hasUninstallAction) {
+                Log.i(TAG, "GUARD: Uninstall dialog for MindVault detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding uninstall dialog", e)
+        }
+        return false
+    }
+
+    /**
+     * Guards the Google Play Store. If the user opens MindVault's page on the
+     * Play Store (where they could tap Uninstall), we press Back.
+     */
+    private fun guardPlayStore(event: AccessibilityEvent?): Boolean {
+        try {
+            val source = event?.source ?: return false
+            val allText = collectAllText(source)
+            source.recycle()
+
+            val hasMindVault = allText.contains("mindvault") ||
+                    allText.contains("com.example.mindvault")
+
+            // Only block if we see MindVault + uninstall on the Play Store page
+            if (hasMindVault && allText.contains("uninstall")) {
+                Log.i(TAG, "GUARD: Play Store uninstall page for MindVault detected — pressing Back")
+                performGlobalAction(GLOBAL_ACTION_BACK)
+                return true
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error guarding Play Store", e)
+        }
+        return false
+    }
+
+    // ========================== TEXT COLLECTION ==========================
+
+    /**
+     * Collects ALL visible text from the entire view hierarchy into a single
+     * lowercase string. This enables two-pass detection where keywords like
+     * "MindVault" and "Deactivate" may appear in completely different nodes.
+     */
+    private fun collectAllText(node: AccessibilityNodeInfo, depth: Int = 0): String {
+        if (depth > 20) return "" // Safety limit
+
+        val sb = StringBuilder()
+        val text = node.text?.toString() ?: ""
+        val desc = node.contentDescription?.toString() ?: ""
+        if (text.isNotEmpty()) sb.append(text).append(" ")
+        if (desc.isNotEmpty()) sb.append(desc).append(" ")
+
+        for (i in 0 until node.childCount) {
+            val child = node.getChild(i) ?: continue
+            sb.append(collectAllText(child, depth + 1))
+            child.recycle()
+        }
+        return sb.toString().lowercase()
+    }
+
+    // ========================== APP BLOCKING ==========================
 
     private fun checkAndBlockApp(packageName: String, event: AccessibilityEvent?) {
         if (!FocusManager.isInitialized()) {
@@ -97,10 +374,6 @@ class FocusAccessibilityService : AccessibilityService() {
      * Scans all visible windows via the Accessibility API to find the actual
      * window belonging to [packageName]. Returns its screen bounds, or null
      * if no matching window is found.
-     *
-     * This is far more reliable than event.source.getBoundsInScreen() which
-     * often returns null or returns the bounds of a single UI node rather
-     * than the window itself.
      */
     private fun getWindowBoundsForPackage(packageName: String): Rect? {
         try {
@@ -111,7 +384,6 @@ class FocusAccessibilityService : AccessibilityService() {
                     val rect = Rect()
                     window.getBoundsInScreen(rect)
                     root.recycle()
-                    // Ignore zero-sized or invalid bounds
                     if (rect.width() > 0 && rect.height() > 0) {
                         return rect
                     }
@@ -124,29 +396,7 @@ class FocusAccessibilityService : AccessibilityService() {
         return null
     }
 
-    /**
-     * Guards the Device Admin settings page. If the user navigates to
-     * a screen that would let them deactivate MindVault's Device Admin
-     * (which would then allow uninstallation), we press Back.
-     *
-     * Only guards when:
-     * 1. Advanced Protection is enabled, AND
-     * 2. Device Admin is currently active (so we block deactivation, not activation)
-     */
-    private fun guardDeviceAdminSettings(event: AccessibilityEvent?) {
-        if (!isAdvancedProtectionEnabled()) return
-        if (!isDeviceAdminCurrentlyActive()) return
-        try {
-            val source = event?.source ?: return
-            if (containsDeviceAdminText(source)) {
-                Log.i(TAG, "Device Admin deactivation page detected — pressing Back")
-                performGlobalAction(GLOBAL_ACTION_BACK)
-            }
-            source.recycle()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error guarding device admin settings", e)
-        }
-    }
+    // ========================== HELPERS ==========================
 
     /**
      * Checks if MindVault's Device Admin is currently active.
@@ -162,27 +412,7 @@ class FocusAccessibilityService : AccessibilityService() {
     }
 
     /**
-     * Guards the Accessibility Settings page when Advanced Protection is
-     * enabled. If the user opens the accessibility detail page for
-     * MindVault (where they could turn off the toggle), we press Back.
-     */
-    private fun guardAccessibilitySettings(event: AccessibilityEvent?) {
-        if (!isAdvancedProtectionEnabled()) return
-        try {
-            val source = event?.source ?: return
-            if (containsAccessibilityText(source)) {
-                Log.i(TAG, "Accessibility settings for MindVault detected — pressing Back")
-                performGlobalAction(GLOBAL_ACTION_BACK)
-            }
-            source.recycle()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error guarding accessibility settings", e)
-        }
-    }
-
-    /**
-     * Checks if Advanced Protection is currently enabled (both Device Admin
-     * and Scroll Interruptions are active).
+     * Checks if Advanced Protection is currently enabled in SharedPreferences.
      */
     private fun isAdvancedProtectionEnabled(): Boolean {
         return try {
@@ -193,66 +423,7 @@ class FocusAccessibilityService : AccessibilityService() {
         }
     }
 
-    /**
-     * Recursively searches the view hierarchy for text that indicates
-     * the user is on a Device Admin deactivation or app uninstall page
-     * specifically targeting MindVault.
-     */
-    private fun containsDeviceAdminText(node: AccessibilityNodeInfo, depth: Int = 0): Boolean {
-        if (depth > 15) return false // Prevent infinite recursion
-        
-        val text = node.text?.toString()?.lowercase() ?: ""
-        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
-        val combined = "$text $desc"
-
-        // Check if this is specifically about MindVault's device admin
-        val isMindVaultAdminPage = combined.contains("mindvault") &&
-                (combined.contains("deactivate") || combined.contains("device admin") ||
-                 combined.contains("uninstall") || combined.contains("remove"))
-
-        if (isMindVaultAdminPage) return true
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (containsDeviceAdminText(child, depth + 1)) {
-                child.recycle()
-                return true
-            }
-            child.recycle()
-        }
-        return false
-    }
-
-    /**
-     * Recursively searches for text indicating the user is on the
-     * Accessibility Service detail page for MindVault (where they
-     * could disable the toggle).
-     */
-    private fun containsAccessibilityText(node: AccessibilityNodeInfo, depth: Int = 0): Boolean {
-        if (depth > 15) return false
-        
-        val text = node.text?.toString()?.lowercase() ?: ""
-        val desc = node.contentDescription?.toString()?.lowercase() ?: ""
-        val combined = "$text $desc"
-
-        // Detect the MindVault accessibility service detail page
-        // This page typically shows the app name + "use [service name]" toggle
-        val isMindVaultAccessibilityPage = combined.contains("mindvault") &&
-                (combined.contains("accessibility") || combined.contains("use mindvault") ||
-                 combined.contains("focus accessibility") || combined.contains("installed service"))
-
-        if (isMindVaultAccessibilityPage) return true
-
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i) ?: continue
-            if (containsAccessibilityText(child, depth + 1)) {
-                child.recycle()
-                return true
-            }
-            child.recycle()
-        }
-        return false
-    }
+    // ========================== LIFECYCLE ==========================
 
     override fun onInterrupt() {
         Log.d(TAG, "Service interrupted.")

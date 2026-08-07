@@ -114,9 +114,21 @@ class MainActivity : ComponentActivity() {
         // Check for OTA updates
         UpdateChecker.checkForUpdate(this)
 
+        // Initialize AppCompatibilityManager
+        com.example.mindvault.utils.AppCompatibilityManager.init(this)
+
         setContent {
         // The Accessibility Service is managed by the system and will run when enabled.
         // No need to manually start any service here.
+
+        // Check if accessibility was auto-disabled for compatibility
+        var showReEnableDialog by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) {
+            if (com.example.mindvault.utils.AppCompatibilityManager.wasAutoDisabled(this@MainActivity)) {
+                showReEnableDialog = true
+                com.example.mindvault.utils.AppCompatibilityManager.markAutoDisabled(false)
+            }
+        }
 
         MindVaultTheme {
             val context = LocalContext.current
@@ -168,6 +180,34 @@ class MainActivity : ComponentActivity() {
             HomeScreen(onLaunchLogin = {
                 loginLauncher.launch(Intent(context, LoginActivity::class.java))
             })
+
+            // Re-enable Accessibility dialog (after auto-disable for compatibility)
+            if (showReEnableDialog) {
+                AlertDialog(
+                    onDismissRequest = { showReEnableDialog = false },
+                    title = { Text("Accessibility Service Disabled", color = Color.White) },
+                    text = {
+                        Text(
+                            "MindVault temporarily disabled its Accessibility Service because you opened an app that conflicts with it.\n\nTo use Focus Mode again, please re-enable MindVault's Accessibility Service.",
+                            color = Color.White.copy(alpha = 0.8f)
+                        )
+                    },
+                    containerColor = Color(0xFF16213E),
+                    confirmButton = {
+                        TextButton(onClick = {
+                            showReEnableDialog = false
+                            context.startActivity(Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                        }) {
+                            Text("Open Settings", color = Color(0xFF6C63FF))
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showReEnableDialog = false }) {
+                            Text("Later", color = Color.White.copy(alpha = 0.6f))
+                        }
+                    }
+                )
+            }
         }
     }
     }

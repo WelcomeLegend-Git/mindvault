@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.firebase.appdistribution)
     id("com.google.devtools.ksp")
 }
 
@@ -14,8 +15,8 @@ android {
         applicationId = "com.example.mindvault"
         minSdk = 28
         targetSdk = 36
-        versionCode = 7
-        versionName = "3.2.2"
+        versionCode = 8
+        versionName = "3.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -29,6 +30,12 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
+            firebaseAppDistribution {
+                appId = "1:930728313401:android:bb0046d431682399cbc3e8"
+                artifactType = "APK"
+                releaseNotes = "v3.3.0: App Compatibility for banking apps, stronger uninstall protection, pre-session permission reminders"
+                groups = "testers" // This is the group name in Firebase console
+            }
         }
     }
     compileOptions {

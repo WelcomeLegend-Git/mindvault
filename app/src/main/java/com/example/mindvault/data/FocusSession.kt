@@ -2,6 +2,8 @@ package com.example.mindvault.data
 
 import android.content.Context
 import android.content.Intent
+import android.app.AlarmManager
+import android.app.PendingIntent
 import android.util.Log
 
 import java.time.LocalTime
@@ -18,6 +20,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.util.Calendar
+import com.example.mindvault.receivers.FocusReminderReceiver
 
 object FocusManager {
     private lateinit var appContext: Context
@@ -86,6 +90,9 @@ object FocusManager {
             Log.d("FocusManager", "Triggering cloud sync after configuration update.")
             AuthManager.syncUserDataToCloud()
         }
+
+        // Schedule pre-session permission reminders
+        schedulePreSessionReminders()
     }
 
 
@@ -245,5 +252,71 @@ object FocusManager {
 
     fun getFocusModeEnabled(): Boolean {
         return focusModeEnabled
+    }
+
+    /**
+     * Schedules AlarmManager alarms 5 minutes before each configured time slot.
+     * When the alarm fires, FocusReminderReceiver checks if permissions are
+     * granted and sends a notification if they're missing.
+     */
+    fun schedulePreSessionReminders() {
+        if (!::appContext.isInitialized) return
+
+        val am = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+
+        // Cancel all existing reminder alarms (IDs 10000-10099)
+        for (i in 0 until 100) {
+            val cancelIntent = Intent(appContext, FocusReminderReceiver::class.java).apply {
+                action = FocusReminderReceiver.ACTION_FOCUS_REMINDER
+            }
+            val cancelPi = PendingIntent.getBroadcast(
+                appContext, 10000 + i, cancelIntent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (cancelPi != null) {
+                am.cancel(cancelPi)
+            }
+        }
+
+        // Schedule new alarms for each time slot
+        val slots = currentConfiguration.timeSlots
+        if (!currentConfiguration.focusModeEnabled || slots.isEmpty()) {
+            Log.d("FocusManager", "No slots or focus disabled — skipped reminder scheduling")
+            return
+        }
+
+        slots.forEachIndexed { index, slot ->
+            val reminderTime = slot.startTime.minusMinutes(5)
+
+            val now = Calendar.getInstance()
+            val target = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, reminderTime.hour)
+                set(Calendar.MINUTE, reminderTime.minute)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+                // If the time already passed today, schedule for tomorrow
+                if (before(now)) add(Calendar.DAY_OF_YEAR, 1)
+            }
+
+            val intent = Intent(appContext, FocusReminderReceiver::class.java).apply {
+                action = FocusReminderReceiver.ACTION_FOCUS_REMINDER
+            }
+            val pi = PendingIntent.getBroadcast(
+                appContext, 10000 + index, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+
+            try {
+                am.setRepeating(
+                    AlarmManager.RTC_WAKEUP,
+                    target.timeInMillis,
+                    AlarmManager.INTERVAL_DAY,
+                    pi
+                )
+                Log.i("FocusManager", "Scheduled reminder for slot $index at $reminderTime (daily)")
+            } catch (e: Exception) {
+                Log.e("FocusManager", "Failed to schedule reminder alarm", e)
+            }
+        }
     }
 }

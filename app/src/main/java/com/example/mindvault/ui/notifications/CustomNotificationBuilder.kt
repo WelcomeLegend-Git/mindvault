@@ -182,4 +182,85 @@ object CustomNotificationBuilder {
             manager.createNotificationChannel(channel)
         }
     }
+
+    // ========================== SYSTEM NOTIFICATIONS ==========================
+
+    private const val SYSTEM_CHANNEL_ID = "mindvault_system_channel"
+    private const val COMPATIBILITY_NOTIF_ID = 9001
+    private const val REMINDER_NOTIF_ID = 9002
+
+    private fun ensureSystemChannel(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(
+                SYSTEM_CHANNEL_ID,
+                "MindVault System Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Important system alerts and permission reminders"
+            }
+            nm.createNotificationChannel(channel)
+        }
+    }
+
+    /**
+     * Notification shown when Accessibility Service auto-disables for
+     * a compatibility app (banking app etc).
+     */
+    fun showCompatibilityDisabledNotification(context: Context) {
+        ensureSystemChannel(context)
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        // Tapping opens Accessibility Settings
+        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, SYSTEM_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("⚠️ Accessibility Service Disabled")
+            .setContentText("Turned off for app compatibility. Tap to re-enable for Focus Mode.")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("MindVault's Accessibility Service was turned off because you opened an app that conflicts with it. Tap here to re-enable it before your next Focus session."))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        nm.notify(COMPATIBILITY_NOTIF_ID, notification)
+    }
+
+    /**
+     * Notification shown 5 minutes before a scheduled Focus session
+     * when required permissions (especially Accessibility) are missing.
+     */
+    fun showPermissionReminderNotification(context: Context) {
+        ensureSystemChannel(context)
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        val intent = Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, 1, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, SYSTEM_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setContentTitle("🔔 Focus Session Starting Soon")
+            .setContentText("Accessibility Service is disabled. Tap to enable it now.")
+            .setStyle(NotificationCompat.BigTextStyle()
+                .bigText("Your scheduled Focus session starts in 5 minutes, but MindVault's Accessibility Service is currently off. Enable it now so your apps stay blocked during Focus Mode."))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .build()
+
+        nm.notify(REMINDER_NOTIF_ID, notification)
+    }
 }
