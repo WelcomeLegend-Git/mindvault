@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://www.bestpractices.dev/projects/14077"><img src="https://www.bestpractices.dev/projects/14077/badge" alt="OpenSSF Best Practices"></a>
   <img src="https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin" />
   <img src="https://img.shields.io/badge/Jetpack_Compose-4285F4?logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
   <img src="https://img.shields.io/badge/Material_3-E8DEF8?logo=materialdesign&logoColor=black" alt="Material 3" />
