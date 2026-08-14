@@ -32,6 +32,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Shadow
@@ -255,7 +256,10 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
         
         Column(
             modifier = Modifier
-                .fillMaxSize(),
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
@@ -267,7 +271,7 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
                 onLaunchLogin = onLaunchLogin,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }
@@ -277,7 +281,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 50.dp)
+            .padding(top = 8.dp)
     ) {
         // Profile icon stays at the top
         val context = LocalContext.current
@@ -292,11 +296,11 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 16.dp)
+                .size(48.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
             ) {
                 if (user != null && !user!!.profilePicture.isNullOrBlank()) {
@@ -311,7 +315,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Profile",
                         tint = Color.White,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                 }
             }
@@ -321,29 +325,30 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 30.dp, bottom = 24.dp),
+                .padding(top = 16.dp, bottom = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "MindVault",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White
+                color = Color.White,
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             Text(
                 text = "Your Study Companion",
                 fontSize = 16.sp,
-                color = Color.White.copy(alpha = 0.7f)
+                color = Color.White.copy(alpha = 0.7f),
+                textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             // --- REPLACE ClockView WITH TOGGLE ---
             // Remove the label and double the size of the toggle
-            Spacer(modifier = Modifier.height(24.dp))
             val activeSlot by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
             val focusModeEnabled by remember { mutableStateOf(FocusManager.getFocusModeEnabled()) }
             var switchState by remember { mutableStateOf(focusModeEnabled) }
@@ -429,7 +434,7 @@ fun StatusCard() {
     
     Card(
         modifier = Modifier
-            .fillMaxWidth(0.95f),
+            .fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -491,21 +496,24 @@ fun StatusCard() {
                         text = "Please allow all permissions to activate focus mode",
                         fontSize = 18.sp,
                         color = Color(0xFFFFA500),
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 22.sp
                     )
                 } else if (activeSlot != null) {
                     Text(
                         text = "Focus Mode: ${activeSlot?.type?.name?.replace("_", " ")} until ${activeSlot?.endTime}",
                         fontSize = 18.sp,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 22.sp
                     )
                 } else {
                     Text(
                         text = "Focus mode ready - no active session",
                         fontSize = 18.sp,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 22.sp
                     )
                 }
                 
@@ -515,7 +523,8 @@ fun StatusCard() {
                     text = nextSlotInfo,
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    lineHeight = 18.sp
                 )
             }
         }
@@ -574,7 +583,7 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     
     Card(
         modifier = Modifier
-            .fillMaxWidth(0.95f)
+            .fillMaxWidth()
             .animateContentSize(animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing))
             .clickable { 
                 if (allPermissionsGranted) {
@@ -753,9 +762,11 @@ fun PermissionRow(name: String, isEnabled: Boolean, onRequest: () -> Unit) {
             text = name,
             fontSize = 14.sp,
             color = Color.White.copy(alpha = if (isEnabled) 0.9f else 0.7f),
-            fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Normal,
+            modifier = Modifier.weight(1f, fill = false)
         )
         
+        Spacer(modifier = Modifier.width(8.dp))
         Spacer(modifier = Modifier.weight(1f))
         
         if (!isEnabled) {
@@ -778,11 +789,15 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         // First Row
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             FeatureCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 title = "Focus Mode",
                 subtitle = "Setup & Manage",
                 icon = Icons.Default.Lock,
@@ -797,10 +812,10 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                 context.startActivity(Intent(context, FocusModeSetupActivity::class.java))
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
-            
             FeatureCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 title = "Statistics",
                 subtitle = "View Insights",
                 icon = Icons.Default.BarChart,
@@ -816,15 +831,19 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
             }
         }
         
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         
         // Second Row
         Row(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             FeatureCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 title = "Achievements",
                 subtitle = "View Rewards",
                 icon = Icons.Default.EmojiEvents,
@@ -839,10 +858,10 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                 context.startActivity(Intent(context, AchievementsActivity::class.java))
             }
             
-            Spacer(modifier = Modifier.width(16.dp))
-            
             FeatureCard(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
                 title = "Help Center",
                 subtitle = "Get Support",
                 icon = Icons.Default.ContactSupport,
@@ -876,12 +895,11 @@ fun FeatureCard(
 
     Card(
         modifier = modifier
-            .padding(8.dp)
             .fillMaxHeight()
             .clickable(enabled = isActive, onClick = onClick),
-        shape = RoundedCornerShape(24.dp), // Increased corner radius
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent // We use a gradient background
+            containerColor = Color.Transparent
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isActive) 12.dp else 4.dp,

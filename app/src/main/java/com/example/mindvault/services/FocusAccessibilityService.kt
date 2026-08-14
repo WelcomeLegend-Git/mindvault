@@ -113,16 +113,15 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /**
      * Determines if self-protection guards should be active.
-     * Guards activate when EITHER:
-     * 1. Focus Mode is currently running (always protect during sessions), OR
-     * 2. Advanced Protection toggle is explicitly enabled
+     * Guards activate ONLY when Focus Mode is currently running.
+     * Outside of focus sessions, users have full access to device settings.
      */
     private fun shouldGuardSelf(): Boolean {
         val focusActive = try {
             FocusManager.isInitialized() && FocusManager.isFocusModeActive()
         } catch (_: Exception) { false }
 
-        return focusActive || isAdvancedProtectionEnabled()
+        return focusActive
     }
 
     /**
