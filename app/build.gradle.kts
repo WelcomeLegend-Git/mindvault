@@ -15,8 +15,8 @@ android {
         applicationId = "com.example.mindvault"
         minSdk = 28
         targetSdk = 36
-        versionCode = 9
-        versionName = "3.3.1"
+        versionCode = 10
+        versionName = "3.3.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -33,7 +33,7 @@ android {
             firebaseAppDistribution {
                 appId = "1:930728313401:android:bb0046d431682399cbc3e8"
                 artifactType = "APK"
-                releaseNotes = "v3.3.1: Responsive Home Screen layout fix, updated Accessibility self-protection logic"
+                releaseNotes = "v3.3.2: Fluid motion card spring micro-interactions & smooth activity transitions"
                 groups = "testers" // This is the group name in Firebase console
             }
         }

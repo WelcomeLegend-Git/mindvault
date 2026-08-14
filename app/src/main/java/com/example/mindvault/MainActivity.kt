@@ -1,6 +1,7 @@
 package com.example.mindvault
 
 import android.Manifest
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -11,6 +12,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +35,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Shadow
@@ -256,10 +258,7 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
         
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp),
+                .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             HomeHeader(onLaunchLogin = onLaunchLogin, expandedState = expandedState)
@@ -271,7 +270,7 @@ fun HomeScreen(onLaunchLogin: () -> Unit) {
                 onLaunchLogin = onLaunchLogin,
                 modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
         }
     }
 }
@@ -281,7 +280,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp)
+            .padding(top = 50.dp)
     ) {
         // Profile icon stays at the top
         val context = LocalContext.current
@@ -296,11 +295,11 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
             },
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .size(48.dp)
+                .padding(end = 16.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(32.dp)
                     .clip(CircleShape)
             ) {
                 if (user != null && !user!!.profilePicture.isNullOrBlank()) {
@@ -315,7 +314,7 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = "Profile",
                         tint = Color.White,
-                        modifier = Modifier.size(36.dp)
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
@@ -325,30 +324,29 @@ fun HomeHeader(onLaunchLogin: () -> Unit, expandedState: MutableState<Boolean>) 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 16.dp, bottom = 20.dp),
+                .padding(top = 30.dp, bottom = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = "MindVault",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.White,
-                textAlign = TextAlign.Center
+                color = Color.White
             )
 
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = "Your Study Companion",
                 fontSize = 16.sp,
-                color = Color.White.copy(alpha = 0.7f),
-                textAlign = TextAlign.Center
+                color = Color.White.copy(alpha = 0.7f)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // --- REPLACE ClockView WITH TOGGLE ---
             // Remove the label and double the size of the toggle
+            Spacer(modifier = Modifier.height(24.dp))
             val activeSlot by FocusManager.activeSlotFlow.collectAsStateWithLifecycle()
             val focusModeEnabled by remember { mutableStateOf(FocusManager.getFocusModeEnabled()) }
             var switchState by remember { mutableStateOf(focusModeEnabled) }
@@ -434,7 +432,7 @@ fun StatusCard() {
     
     Card(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth(0.95f),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
     ) {
@@ -496,24 +494,21 @@ fun StatusCard() {
                         text = "Please allow all permissions to activate focus mode",
                         fontSize = 18.sp,
                         color = Color(0xFFFFA500),
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp
+                        fontWeight = FontWeight.Bold
                     )
                 } else if (activeSlot != null) {
                     Text(
                         text = "Focus Mode: ${activeSlot?.type?.name?.replace("_", " ")} until ${activeSlot?.endTime}",
                         fontSize = 18.sp,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp
+                        fontWeight = FontWeight.Bold
                     )
                 } else {
                     Text(
                         text = "Focus mode ready - no active session",
                         fontSize = 18.sp,
                         color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 22.sp
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 
@@ -523,8 +518,7 @@ fun StatusCard() {
                     text = nextSlotInfo,
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 18.sp
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -583,7 +577,7 @@ fun PermissionStatusCard(expandedState: MutableState<Boolean>) {
     
     Card(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxWidth(0.95f)
             .animateContentSize(animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing))
             .clickable { 
                 if (allPermissionsGranted) {
@@ -762,11 +756,9 @@ fun PermissionRow(name: String, isEnabled: Boolean, onRequest: () -> Unit) {
             text = name,
             fontSize = 14.sp,
             color = Color.White.copy(alpha = if (isEnabled) 0.9f else 0.7f),
-            fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.weight(1f, fill = false)
+            fontWeight = if (isEnabled) FontWeight.Bold else FontWeight.Normal
         )
         
-        Spacer(modifier = Modifier.width(8.dp))
         Spacer(modifier = Modifier.weight(1f))
         
         if (!isEnabled) {
@@ -783,21 +775,23 @@ fun PermissionRow(name: String, isEnabled: Boolean, onRequest: () -> Unit) {
 fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     
+    val launchSmoothly: (Class<*>) -> Unit = { clazz ->
+        val intent = Intent(context, clazz)
+        context.startActivity(intent)
+        (context as? Activity)?.overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // First Row
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.weight(1f),
                 title = "Focus Mode",
                 subtitle = "Setup & Manage",
                 icon = Icons.Default.Lock,
@@ -809,13 +803,13 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 )
             ) {
-                context.startActivity(Intent(context, FocusModeSetupActivity::class.java))
+                launchSmoothly(FocusModeSetupActivity::class.java)
             }
             
+            Spacer(modifier = Modifier.width(16.dp))
+            
             FeatureCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.weight(1f),
                 title = "Statistics",
                 subtitle = "View Insights",
                 icon = Icons.Default.BarChart,
@@ -827,23 +821,19 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 )
             ) {
-                context.startActivity(Intent(context, StatisticsActivity::class.java))
+                launchSmoothly(StatisticsActivity::class.java)
             }
         }
         
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         
         // Second Row
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
             FeatureCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.weight(1f),
                 title = "Achievements",
                 subtitle = "View Rewards",
                 icon = Icons.Default.EmojiEvents,
@@ -855,13 +845,13 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 )
             ) {
-                context.startActivity(Intent(context, AchievementsActivity::class.java))
+                launchSmoothly(AchievementsActivity::class.java)
             }
             
+            Spacer(modifier = Modifier.width(16.dp))
+            
             FeatureCard(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
+                modifier = Modifier.weight(1f),
                 title = "Help Center",
                 subtitle = "Get Support",
                 icon = Icons.Default.ContactSupport,
@@ -873,7 +863,7 @@ fun FeatureCardsGrid(onLaunchLogin: () -> Unit, modifier: Modifier = Modifier) {
                     )
                 )
             ) {
-                context.startActivity(Intent(context, HelpCenterActivity::class.java))
+                launchSmoothly(HelpCenterActivity::class.java)
             }
         }
     }
@@ -893,17 +883,49 @@ fun FeatureCard(
     val titleAlpha = if (isActive) 1f else 0.8f
     val subtitleAlpha = if (isActive) 0.9f else 0.6f
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    // Smooth spring physics on press for tactile bouncy feedback
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "cardScale"
+    )
+
+    val iconScale by animateFloatAsState(
+        targetValue = if (isPressed) 1.12f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "iconScale"
+    )
+
     Card(
         modifier = modifier
+            .padding(8.dp)
             .fillMaxHeight()
-            .clickable(enabled = isActive, onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                enabled = isActive,
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        shape = RoundedCornerShape(24.dp), // Increased corner radius
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
+            containerColor = Color.Transparent // We use a gradient background
         ),
         elevation = CardDefaults.cardElevation(
             defaultElevation = if (isActive) 12.dp else 4.dp,
-            pressedElevation = if (isActive) 6.dp else 2.dp
+            pressedElevation = if (isActive) 4.dp else 2.dp
         )
     ) {
         Box(
@@ -932,8 +954,9 @@ fun FeatureCard(
                     brush = Brush.linearGradient(
                         colors = listOf(
                             MaterialTheme.colorScheme.onSurface.copy(
-                                alpha = 0.5f
-                            ), MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                alpha = if (isPressed) 0.8f else 0.5f
+                            ),
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
                         )
                     ),
                     shape = RoundedCornerShape(24.dp)
@@ -946,15 +969,19 @@ fun FeatureCard(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                // 3D Icon with shadow effect
+                // 3D Icon with shadow effect and spring pulse
                 Box(
                     modifier = Modifier
                         .size(56.dp)
+                        .graphicsLayer {
+                            scaleX = iconScale
+                            scaleY = iconScale
+                        }
                         .background(
                             brush = Brush.radialGradient(
                                 colors = listOf(
-                                    Color.White.copy(alpha = 0.8f),
-                                    Color.White.copy(alpha = 0.3f)
+                                    Color.White.copy(alpha = if (isPressed) 0.95f else 0.8f),
+                                    Color.White.copy(alpha = if (isPressed) 0.45f else 0.3f)
                                 )
                             ),
                             shape = CircleShape
