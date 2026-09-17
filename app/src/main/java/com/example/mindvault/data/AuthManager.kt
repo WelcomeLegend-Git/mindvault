@@ -401,11 +401,18 @@ object AuthManager {
             LocalRestore.checkWritable()
             val owner = localOwner()
             if (owner != null && owner != session.uid) {
-                publish(
-                    session, CloudBackupStatus.BLOCKED,
-                    "Device data belongs to another account or has unknown provenance. Nothing has been cleared, reassigned or uploaded."
-                )
-                return false
+                // If provenance is genuinely UNKNOWN (legacy migration edge case), allow the
+                // current user to claim their own data on retry rather than permanently blocking.
+                if (owner == DeviceDataOwnership.UNKNOWN) {
+                    LocalRestore.claim(MindVaultApplication.instance, session.uid)
+                    Log.i(TAG, "Auto-claimed UNKNOWN provenance data for uid ${session.uid}")
+                } else {
+                    publish(
+                        session, CloudBackupStatus.BLOCKED,
+                        "Device data belongs to another account. Nothing has been cleared, reassigned or uploaded."
+                    )
+                    return false
+                }
             }
             if (restore) requireIdleRestore(session.uid)
             val snapshot = withTimeoutOrNull(30_000) { serverBackup(session.uid) }

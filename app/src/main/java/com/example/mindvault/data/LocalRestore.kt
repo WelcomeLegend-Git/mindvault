@@ -84,9 +84,35 @@ internal object LocalRestore {
         blocked = true
         RestoreTransaction(storage(context)).recover()
         val identity = prefs(context, "mindvault_cloud_identity")
-        val token = DeviceDataOwnership.resolve(
-            identity.getString("local_data_owner", null),
-            provenanceNames.map { name -> snapshotValues(context, name) })
+        val images = provenanceNames.map { name -> snapshotValues(context, name) }
+        var token = DeviceDataOwnership.resolve(
+            identity.getString("local_data_owner", null), images)
+
+        // ---- Legacy migration for users upgrading from pre-v3.4.0 ----
+        // Before v3.4.0 no provenance tokens existed, so existing data from a signed-in user
+        // resolves to UNKNOWN (data present but no token). If: (1) the resolved token is UNKNOWN,
+        // (2) no data store already has a provenance key (ruling out a genuine conflict), and
+        // (3) a Firebase user is currently authenticated, then the data was created by the only
+        // account that ever used this device — assign it to that user.
+        if (token == DeviceDataOwnership.UNKNOWN) {
+            val noProvenanceKeysExist = images.none { it.containsKey(DeviceDataOwnership.KEY) }
+            val legacyOwner = identity.getString("local_data_owner", null)
+            if (noProvenanceKeysExist && legacyOwner == null) {
+                val firebaseUid = try {
+                    com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
+                } catch (_: Exception) { null }
+                if (firebaseUid != null) {
+                    // Stamp the identity prefs so future startups see a durable owner claim.
+                    check(identity.edit().putString("local_data_owner", firebaseUid).commit()) {
+                        "Could not persist legacy data owner migration"
+                    }
+                    token = DeviceDataOwnership.token(firebaseUid)
+                    android.util.Log.i("LocalRestore",
+                        "Legacy migration: assigned data ownership to Firebase uid $firebaseUid")
+                }
+            }
+        }
+
         provenanceNames.forEach { name ->
             if (prefs(context, name).getString(DeviceDataOwnership.KEY, null) != token) {
                 check(prefs(context, name).edit().putString(DeviceDataOwnership.KEY, token).commit()) {
@@ -116,7 +142,9 @@ internal object LocalRestore {
     /** Reserve ownership BEFORE network submission, including timeout/cancellation/sign-out paths. */
     fun claim(context: Context, uid: String) = exclusive {
         checkWritable()
-        check(owner(context).let { it == null || it == uid }) { "Device data belongs to another or unknown owner" }
+        check(owner(context).let { it == null || it == uid || it == DeviceDataOwnership.UNKNOWN }) {
+            "Device data belongs to another account"
+        }
         // Identity first: a partial provenance write still leaves a durable, conservative owner.
         check(prefs(context, "mindvault_cloud_identity").edit().putString("local_data_owner", uid).commit())
         provenanceNames.forEach { name ->
