@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mindvault.data.AppPasswordManager
 import com.example.mindvault.ui.theme.MindVaultTheme
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 class SecurityActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,8 +58,9 @@ class SecurityActivity : ComponentActivity() {
 @Composable
 fun SecurityScreen() {
     val context = LocalContext.current
-    // Corrected: isPasswordSet() does not take any arguments.
     val isPasswordSet = remember { mutableStateOf(AppPasswordManager.isPasswordSet()) }
+    val scope = rememberCoroutineScope()
+    var isBusy by remember { mutableStateOf(false) }
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -122,7 +125,8 @@ fun SecurityScreen() {
                     onValueChange = { currentPassword = it },
                     label = "Current Password",
                     isVisible = isCurrentPasswordVisible,
-                    onVisibilityChange = { isCurrentPasswordVisible = !isCurrentPasswordVisible }
+                    onVisibilityChange = { isCurrentPasswordVisible = !isCurrentPasswordVisible },
+                    enabled = !isBusy
                 )
                 Spacer(Modifier.height(16.dp))
             }
@@ -132,7 +136,8 @@ fun SecurityScreen() {
                 onValueChange = { newPassword = it },
                 label = if (isPasswordSet.value) "New Password" else "Set Password",
                 isVisible = isNewPasswordVisible,
-                onVisibilityChange = { isNewPasswordVisible = !isNewPasswordVisible }
+                onVisibilityChange = { isNewPasswordVisible = !isNewPasswordVisible },
+                enabled = !isBusy
             )
             Spacer(Modifier.height(16.dp))
 
@@ -141,28 +146,42 @@ fun SecurityScreen() {
                 onValueChange = { confirmPassword = it },
                 label = "Confirm Password",
                 isVisible = isConfirmPasswordVisible,
-                onVisibilityChange = { isConfirmPasswordVisible = !isConfirmPasswordVisible }
+                onVisibilityChange = { isConfirmPasswordVisible = !isConfirmPasswordVisible },
+                enabled = !isBusy
             )
 
             Spacer(Modifier.height(32.dp))
 
             Button(
+                enabled = !isBusy,
                 onClick = {
+                    if (isBusy) return@Button
                     if (newPassword.length < 4) {
                         Toast.makeText(context, "Password must be at least 4 characters", Toast.LENGTH_SHORT).show(); return@Button
                     }
                     if (newPassword != confirmPassword) {
                         Toast.makeText(context, "Passwords do not match", Toast.LENGTH_SHORT).show(); return@Button
                     }
-                    // Corrected: verifyPassword() only takes the password string.
-                    if (isPasswordSet.value && !AppPasswordManager.verifyPassword(currentPassword)) {
-                        Toast.makeText(context, "Current password incorrect", Toast.LENGTH_SHORT).show(); return@Button
+                    val submittedCurrentPassword = currentPassword
+                    val submittedNewPassword = newPassword
+                    isBusy = true
+                    scope.launch {
+                        try {
+                            if (!AppPasswordManager.setPassword(submittedNewPassword, submittedCurrentPassword)) {
+                                Toast.makeText(context, "Current password incorrect", Toast.LENGTH_SHORT).show()
+                                return@launch
+                            }
+                            isPasswordSet.value = true
+                            Toast.makeText(context, "Password Updated Successfully", Toast.LENGTH_SHORT).show()
+                            (context as? ComponentActivity)?.finish()
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Unable to update password. Please try again.", Toast.LENGTH_SHORT).show()
+                        } finally {
+                            isBusy = false
+                        }
                     }
-                    // Corrected: setPassword() only takes the password string.
-                    AppPasswordManager.setPassword(newPassword)
-                    isPasswordSet.value = true
-                    Toast.makeText(context, "Password Updated Successfully", Toast.LENGTH_SHORT).show()
-                    (context as? ComponentActivity)?.finish()
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -181,16 +200,30 @@ fun SecurityScreen() {
             // Show Remove Password button only when password is set
             if (isPasswordSet.value) {
                 Spacer(Modifier.height(16.dp))
-                
+
                 OutlinedButton(
+                    enabled = !isBusy,
                     onClick = {
-                        if (!AppPasswordManager.verifyPassword(currentPassword)) {
-                            Toast.makeText(context, "Current password incorrect", Toast.LENGTH_SHORT).show(); return@OutlinedButton
+                        if (isBusy) return@OutlinedButton
+                        val submittedCurrentPassword = currentPassword
+                        isBusy = true
+                        scope.launch {
+                            try {
+                                if (!AppPasswordManager.clearPassword(submittedCurrentPassword)) {
+                                    Toast.makeText(context, "Current password incorrect", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+                                isPasswordSet.value = false
+                                Toast.makeText(context, "Password Removed Successfully", Toast.LENGTH_SHORT).show()
+                                (context as? ComponentActivity)?.finish()
+                            } catch (cancelled: CancellationException) {
+                                throw cancelled
+                            } catch (_: Exception) {
+                                Toast.makeText(context, "Unable to remove password. Please try again.", Toast.LENGTH_SHORT).show()
+                            } finally {
+                                isBusy = false
+                            }
                         }
-                        AppPasswordManager.clearPassword()
-                        isPasswordSet.value = false
-                        Toast.makeText(context, "Password Removed Successfully", Toast.LENGTH_SHORT).show()
-                        (context as? ComponentActivity)?.finish()
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -214,9 +247,11 @@ fun PremiumPasswordTextField(
     onValueChange: (String) -> Unit,
     label: String,
     isVisible: Boolean,
-    onVisibilityChange: () -> Unit
+    onVisibilityChange: () -> Unit,
+    enabled: Boolean = true
 ) {
     TextField(
+        enabled = enabled,
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier
@@ -229,7 +264,7 @@ fun PremiumPasswordTextField(
         trailingIcon = {
             val image = if (isVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
             val description = if (isVisible) "Hide password" else "Show password"
-            IconButton(onClick = onVisibilityChange) {
+            IconButton(onClick = onVisibilityChange, enabled = enabled) {
                 Icon(imageVector = image, description, tint = Color(0xFFD1B1FF))
             }
         },

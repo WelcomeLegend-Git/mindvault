@@ -63,14 +63,14 @@ fun ProfileScreen() {
     val scope = rememberCoroutineScope()
     val currentUser by UserManager.currentUser.collectAsStateWithLifecycle()
     val isLoggedIn by UserManager.isLoggedIn.collectAsStateWithLifecycle()
-    
+
     val scrollState = rememberScrollState()
-    
+
     // Observe real streak data from StatisticsManager
     val userStats by StatisticsManager.userStats.collectAsStateWithLifecycle()
     val currentStreak = userStats?.currentStreak ?: 0
     val longestStreak = userStats?.longestStreak ?: 0
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -110,28 +110,32 @@ fun ProfileScreen() {
                     // The sync button was here. It has been removed because sync is now automatic.
                 }
             )
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // User Profile Card
             if (isLoggedIn && currentUser != null) {
                 UserProfileCard(user = currentUser!!, currentStreak = currentStreak, longestStreak = longestStreak)
             } else {
                 GuestProfileCard()
             }
-            
+
             Spacer(modifier = Modifier.height(24.dp))
-            
+
+            CloudRecoveryCard()
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             // Settings Card
             SettingsSection()
-            
+
             Spacer(modifier = Modifier.height(8.dp))
-            
+
             // App Shortcuts
             AppShortcutsSection()
 
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             // Help & Support
             HelpSupportSection()
 
@@ -220,7 +224,7 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                         )
                     }
                 }
-                
+
                 // Longest Streak - Top Right
                 Box(
                     modifier = Modifier
@@ -253,13 +257,13 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                     }
                 }
             }
-            
+
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Spacer(modifier = Modifier.height(40.dp)) // Space for corner stats
-                
+
                 // Profile Picture with Enhanced Glow
                 Box(
                     modifier = Modifier
@@ -306,9 +310,9 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // User Name with Glow Effect
                 Text(
                     text = user.name,
@@ -323,18 +327,18 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                         )
                     )
                 )
-                
+
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 // User Email
                 Text(
                     text = user.email,
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.8f)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 // Premium Role Badge
                 Box(
                     modifier = Modifier
@@ -374,9 +378,9 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                         color = if (user.role == com.example.mindvault.data.UserRole.PREMIUM) Color.Black else Color.White
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 // Weekly Goal Card - Center Highlight
                 Card(
                     modifier = Modifier
@@ -421,9 +425,9 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                                 color = Color(0xFFFFD700),
                                 letterSpacing = 1.sp
                             )
-                            
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            
+
                             Text(
                                 text = "${user.preferences.weeklyGoal}",
                                 fontSize = 32.sp,
@@ -437,7 +441,7 @@ fun UserProfileCard(user: com.example.mindvault.data.User, currentStreak: Int = 
                                     )
                                 )
                             )
-                            
+
                             Text(
                                 text = "minutes",
                                 fontSize = 14.sp,
@@ -501,26 +505,26 @@ fun GuestProfileCard() {
                         modifier = Modifier.size(48.dp)
                     )
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = "Guest User",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "Limited features available",
                     fontSize = 14.sp,
                     color = Color.White.copy(alpha = 0.7f)
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Button(
                     onClick = { /* TODO: Open login options */ },
                     colors = ButtonDefaults.buttonColors(
@@ -574,7 +578,7 @@ fun SettingsSection() {
                     color = Color(0xFFD1B1FF),
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.Edit,
                     title = "Edit Profile",
@@ -582,7 +586,7 @@ fun SettingsSection() {
                 ) {
                     context.startActivity(Intent(context, EditProfileActivity::class.java))
                 }
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.Lock,
                     title = "Security",
@@ -590,14 +594,14 @@ fun SettingsSection() {
                 ) {
                     context.startActivity(Intent(context, SecurityActivity::class.java))
                 }
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.Notifications,
                     title = "Notifications",
                     subtitle = "Customize your alerts",
                     onClick = { context.startActivity(Intent(context, NotificationSettingsActivity::class.java)) }
                 )
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.Shield,
                     title = "Advanced Protection",
@@ -611,7 +615,7 @@ fun SettingsSection() {
                     subtitle = "Manage apps that conflict with Accessibility",
                     onClick = { context.startActivity(Intent(context, AppCompatibilityActivity::class.java)) }
                 )
-                
+
                 // Developer Section
                 ProfileOptionItem(
                     icon = Icons.Default.DeveloperMode,
@@ -626,9 +630,9 @@ fun SettingsSection() {
 
     if (showDeveloperTestingDialog) {
         AlertDialog(
-            onDismissRequest = { 
-                showDeveloperTestingDialog = false 
-                passwordInput = "" 
+            onDismissRequest = {
+                showDeveloperTestingDialog = false
+                passwordInput = ""
             },
             title = { Text("Developer Access") },
             text = {
@@ -672,8 +676,8 @@ fun SettingsSection() {
             },
             dismissButton = {
                 TextButton(
-                    onClick = { 
-                        showDeveloperTestingDialog = false 
+                    onClick = {
+                        showDeveloperTestingDialog = false
                         passwordInput = ""
                     }
                 ) {
@@ -685,11 +689,10 @@ fun SettingsSection() {
 }
 
 
-
 @Composable
 fun AppShortcutsSection() {
     val context = LocalContext.current
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -719,7 +722,7 @@ fun AppShortcutsSection() {
                     color = Color(0xFFD1B1FF),
                     modifier = Modifier.padding(bottom = 20.dp)
                 )
-            
+
                 ProfileOptionItem(
                     icon = Icons.Default.Schedule,
                     title = "Focus Sessions",
@@ -727,7 +730,7 @@ fun AppShortcutsSection() {
                 ) {
                     context.startActivity(Intent(context, com.example.mindvault.MainActivity::class.java))
                 }
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.BarChart,
                     title = "Statistics",
@@ -735,7 +738,7 @@ fun AppShortcutsSection() {
                 ) {
                     context.startActivity(Intent(context, StatisticsActivity::class.java))
                 }
-                
+
                 ProfileOptionItem(
                     icon = Icons.Default.Settings,
                     title = "Focus Setup",
@@ -751,7 +754,7 @@ fun AppShortcutsSection() {
 @Composable
 fun HelpSupportSection() {
     val context = LocalContext.current
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -771,7 +774,7 @@ fun HelpSupportSection() {
                 color = Color(0xFFD1B1FF),
                 modifier = Modifier.padding(bottom = 20.dp)
             )
-            
+
             ProfileOptionItem(
                 icon = Icons.Default.Help,
                 title = "Help Center",
@@ -779,7 +782,7 @@ fun HelpSupportSection() {
             ) {
                 context.startActivity(Intent(context, HelpCenterActivity::class.java))
             }
-            
+
             ProfileOptionItem(
                 icon = Icons.Default.Feedback,
                 title = "Send Feedback",
@@ -792,7 +795,7 @@ fun HelpSupportSection() {
                 }
                 context.startActivity(intent)
             }
-            
+
             ProfileOptionItem(
                 icon = Icons.Default.Share,
                 title = "Share App",
@@ -801,11 +804,14 @@ fun HelpSupportSection() {
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "text/plain"
                     putExtra(Intent.EXTRA_SUBJECT, "MindVault – Focus & Productivity")
-                    putExtra(Intent.EXTRA_TEXT, "Unlock deep focus with MindVault – the ultra-premium productivity app. Download now: https://welcomelegend-git.github.io/mindvault/")
+                    putExtra(
+                        Intent.EXTRA_TEXT,
+                        "Unlock deep focus with MindVault – the ultra-premium productivity app. Download now: https://welcomelegend-git.github.io/mindvault/"
+                    )
                 }
                 context.startActivity(Intent.createChooser(shareIntent, "Share MindVault"))
             }
-            
+
             ProfileOptionItem(
                 icon = Icons.Default.LocalFireDepartment,
                 title = "View Streak",
@@ -814,7 +820,7 @@ fun HelpSupportSection() {
                 // Open Statistics screen – user can switch to streak calendar there
                 context.startActivity(Intent(context, StatisticsActivity::class.java))
             }
-            
+
             ProfileOptionItem(
                 icon = Icons.Default.Info,
                 title = "About",
@@ -857,9 +863,9 @@ fun ProfileOptionItem(
                 modifier = Modifier.size(20.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -869,14 +875,14 @@ fun ProfileOptionItem(
                 fontWeight = FontWeight.Medium,
                 color = Color.White
             )
-            
+
             Text(
                 text = subtitle,
                 fontSize = 12.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
         }
-        
+
         Icon(
             imageVector = Icons.Default.ArrowForwardIos,
             contentDescription = "Navigate",
@@ -885,4 +891,3 @@ fun ProfileOptionItem(
         )
     }
 }
-

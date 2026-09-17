@@ -28,19 +28,24 @@ object CustomNotificationBuilder {
 
     fun showQuoteNotification(context: Context, isStudySession: Boolean, isScrolling: Boolean): QuoteResult {
         val quoteResult = QuoteEngine.getQuoteForContext(context, isStudySession, isScrolling)
-        
+
         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         createChannel(notificationManager)
+
+        // Keep the full quote accessible even when the collapsed bitmap is ellipsized.
+        val quoteContentDescription = "\"${quoteResult.quote.q}\"\n— ${quoteResult.quote.a}"
 
         // --- Collapsed view (compact, single-line-ish) ---
         val collapsedViews = RemoteViews(context.packageName, R.layout.notification_quote_card_collapsed)
         val collapsedBitmap = createCollapsedBitmap(context, quoteResult)
         collapsedViews.setImageViewBitmap(R.id.ivCustomTextBitmapCollapsed, collapsedBitmap)
+        collapsedViews.setContentDescription(R.id.ivCustomTextBitmapCollapsed, quoteContentDescription)
 
         // --- Expanded view (full quote with author) ---
         val expandedViews = RemoteViews(context.packageName, R.layout.notification_quote_card)
         val expandedBitmap = createExpandedBitmap(context, quoteResult)
         expandedViews.setImageViewBitmap(R.id.ivCustomTextBitmap, expandedBitmap)
+        expandedViews.setContentDescription(R.id.ivCustomTextBitmap, quoteContentDescription)
 
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -61,7 +66,8 @@ object CustomNotificationBuilder {
     private fun createCollapsedBitmap(context: Context, quoteResult: QuoteResult): Bitmap {
         val typeface = Typeface.createFromAsset(context.assets, "fonts/${quoteResult.fontFileName}")
 
-        val currentNightMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val currentNightMode =
+            context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val isDarkMode = currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
         val textColor = if (isDarkMode) Color.WHITE else Color.BLACK
         val authorColor = if (isDarkMode) Color.parseColor("#94A3B8") else Color.parseColor("#475569")
@@ -95,10 +101,11 @@ object CustomNotificationBuilder {
             .setEllipsize(TextUtils.TruncateAt.END)
             .build()
 
-        val authorLayout = StaticLayout.Builder.obtain(authorText, 0, authorText.length, authorPaint, width - (padding * 2))
-            .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
-            .setMaxLines(1)
-            .build()
+        val authorLayout =
+            StaticLayout.Builder.obtain(authorText, 0, authorText.length, authorPaint, width - (padding * 2))
+                .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
+                .setMaxLines(1)
+                .build()
 
         val height = quoteLayout.height + authorLayout.height + (padding * 3)
 
@@ -120,11 +127,12 @@ object CustomNotificationBuilder {
      */
     private fun createExpandedBitmap(context: Context, quoteResult: QuoteResult): Bitmap {
         val typeface = Typeface.createFromAsset(context.assets, "fonts/${quoteResult.fontFileName}")
-        
+
         val quoteText = "\"${quoteResult.quote.q}\""
         val authorText = "— ${quoteResult.quote.a}"
 
-        val currentNightMode = context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val currentNightMode =
+            context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val isDarkMode = currentNightMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
         val textColor = if (isDarkMode) Color.WHITE else Color.BLACK
         val authorColor = if (isDarkMode) Color.parseColor("#94A3B8") else Color.parseColor("#475569")
@@ -152,18 +160,19 @@ object CustomNotificationBuilder {
             .setIncludePad(false)
             .build()
 
-        val authorLayout = StaticLayout.Builder.obtain(authorText, 0, authorText.length, authorPaint, width - (padding * 2))
-            .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
-            .build()
+        val authorLayout =
+            StaticLayout.Builder.obtain(authorText, 0, authorText.length, authorPaint, width - (padding * 2))
+                .setAlignment(Layout.Alignment.ALIGN_OPPOSITE)
+                .build()
 
         val height = quoteLayout.height + authorLayout.height + (padding * 4)
-        
+
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
-        
+
         canvas.translate(padding.toFloat(), padding.toFloat())
         quoteLayout.draw(canvas)
-        
+
         canvas.translate(0f, quoteLayout.height.toFloat() + 20f)
         authorLayout.draw(canvas)
 
@@ -224,8 +233,10 @@ object CustomNotificationBuilder {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("⚠️ Accessibility Service Disabled")
             .setContentText("Turned off for app compatibility. Tap to re-enable for Focus Mode.")
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("MindVault's Accessibility Service was turned off because you opened an app that conflicts with it. Tap here to re-enable it before your next Focus session."))
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("MindVault's Accessibility Service was turned off because you opened an app that conflicts with it. Tap here to re-enable it before your next Focus session.")
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
@@ -254,8 +265,10 @@ object CustomNotificationBuilder {
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle("🔔 Focus Session Starting Soon")
             .setContentText("Accessibility Service is disabled. Tap to enable it now.")
-            .setStyle(NotificationCompat.BigTextStyle()
-                .bigText("Your scheduled Focus session starts in 5 minutes, but MindVault's Accessibility Service is currently off. Enable it now so your apps stay blocked during Focus Mode."))
+            .setStyle(
+                NotificationCompat.BigTextStyle()
+                    .bigText("Your scheduled Focus session starts soon, but MindVault's Accessibility Service is currently off. Enable it now so your apps stay blocked during Focus Mode.")
+            )
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)

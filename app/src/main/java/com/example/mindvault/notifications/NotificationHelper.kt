@@ -1,12 +1,17 @@
 package com.example.mindvault.notifications
 
+import android.Manifest
+import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.mindvault.R
 
 /**
@@ -14,9 +19,23 @@ import com.example.mindvault.R
  */
 object NotificationHelper {
 
+    private fun postNotification(context: Context, id: Int, notification: Notification) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) return
+
+        try {
+            NotificationManagerCompat.from(context).notify(id, notification)
+        } catch (error: SecurityException) {
+            // Permission can be revoked between the check and the notification request.
+            Log.w("NotificationHelper", "Notification permission unavailable", error)
+        }
+    }
+
     const val CHANNEL_MOTIVATION_ID = "daily_motivation"
     private const val CHANNEL_MOTIVATION_NAME = "Daily Motivation"
-    
+
     // Channel for achievement unlocked notifications
     const val CHANNEL_ACHIEVEMENT_ID = "achievement_unlocked"
     private const val CHANNEL_ACHIEVEMENT_NAME = "Achievements"
@@ -74,7 +93,7 @@ object NotificationHelper {
         continuousUseMinutes: Int
     ) {
         val message = "You have been on $appName for about $continuousUseMinutes minutes. " +
-            "Pause, take one breath, and choose what deserves the next few minutes."
+                "Pause, take one breath, and choose what deserves the next few minutes."
         val notification = NotificationCompat.Builder(context, CHANNEL_SCROLL_REMINDERS_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle("A quick pause")
@@ -85,7 +104,7 @@ object NotificationHelper {
             .setAutoCancel(true)
             .build()
 
-        NotificationManagerCompat.from(context).notify(SOCIAL_SCROLL_NOTIFICATION_ID, notification)
+        postNotification(context, SOCIAL_SCROLL_NOTIFICATION_ID, notification)
     }
 
     fun showFocusReminderNotification(context: Context, message: String) {
@@ -100,9 +119,7 @@ object NotificationHelper {
             .setColor(Color.parseColor("#8F5CFF"))
             .setAutoCancel(true)
 
-        with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), builder.build())
-        }
+        postNotification(context, System.currentTimeMillis().toInt(), builder.build())
     }
 
     fun showMotivationNotification(context: Context, quote: String) {
@@ -117,9 +134,7 @@ object NotificationHelper {
             .setColor(Color.parseColor("#8F5CFF"))
             .setAutoCancel(true)
 
-        with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), builder.build())
-        }
+        postNotification(context, System.currentTimeMillis().toInt(), builder.build())
     }
 
     fun showAchievementNotification(context: Context, title: String, description: String) {
@@ -135,8 +150,6 @@ object NotificationHelper {
             .setColor(Color.parseColor("#FFD700"))
             .setAutoCancel(true)
 
-        with(NotificationManagerCompat.from(context)) {
-            notify(System.currentTimeMillis().toInt(), builder.build())
-        }
+        postNotification(context, System.currentTimeMillis().toInt(), builder.build())
     }
 }

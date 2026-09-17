@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Replaced with the actual quote and author by CustomNotificationBuilder. -->
+    <string name="notification_quote_image_description">Quote and author</string>
+</resources>

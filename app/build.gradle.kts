@@ -1,10 +1,12 @@
+import com.google.firebase.appdistribution.gradle.firebaseAppDistribution
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.google.gms.google.services)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.firebase.appdistribution)
-    id("com.google.devtools.ksp")
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -15,10 +17,33 @@ android {
         applicationId = "com.example.mindvault"
         minSdk = 28
         targetSdk = 36
-        versionCode = 10
-        versionName = "3.3.2"
+        versionCode = 11
+        versionName = "3.4.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // All credentials must be supplied together; absent credentials fall back to debug signing for local/direct installs.
+    val signingVariables = listOf(
+        "MINDVAULT_RELEASE_STORE_FILE",
+        "MINDVAULT_RELEASE_STORE_PASSWORD",
+        "MINDVAULT_RELEASE_KEY_ALIAS",
+        "MINDVAULT_RELEASE_KEY_PASSWORD"
+    )
+    val signingValues = signingVariables.associateWith {
+        providers.environmentVariable(it).orNull?.takeIf { value -> value.isNotBlank() }
+    }
+    val hasReleaseSigning = signingValues.values.any { it != null }
+    if (hasReleaseSigning) {
+        require(signingValues.values.all { it != null }) {
+            "Release signing requires all four MINDVAULT_RELEASE_* environment variables."
+        }
+        signingConfigs.create("release") {
+            storeFile = file(requireNotNull(signingValues["MINDVAULT_RELEASE_STORE_FILE"]))
+            storePassword = signingValues["MINDVAULT_RELEASE_STORE_PASSWORD"]
+            keyAlias = signingValues["MINDVAULT_RELEASE_KEY_ALIAS"]
+            keyPassword = signingValues["MINDVAULT_RELEASE_KEY_PASSWORD"]
+        }
     }
 
     buildTypes {
@@ -29,11 +54,15 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseSigning) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             firebaseAppDistribution {
                 appId = "1:930728313401:android:bb0046d431682399cbc3e8"
                 artifactType = "APK"
-                releaseNotes = "v3.3.2: Fluid motion card spring micro-interactions & smooth activity transitions"
+                releaseNotes = "v3.4.0: Comprehensive security hardening, type-safe backup recovery, and robust focus enforcement"
                 groups = "testers" // This is the group name in Firebase console
             }
         }
@@ -61,55 +90,88 @@ dependencies {
     // implementation("com.google.http-client:google-http-client-gson:1.43.3")
 
     // Firebase
-    implementation("com.google.firebase:firebase-firestore-ktx:24.10.3")
-    implementation("com.google.firebase:firebase-auth-ktx:22.3.1")
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.auth.ktx)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
     // Upgrades fragment to fix InvalidFragmentVersionForActivityResult Lint error
-    implementation("androidx.fragment:fragment-ktx:1.8.1")
+    implementation(libs.androidx.fragment.ktx)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
-    
+
     // Additional dependencies for focus mode
-    implementation("androidx.compose.material:material-icons-extended:1.5.4")
-    implementation("androidx.lifecycle:lifecycle-service:2.7.0")
-    implementation("androidx.work:work-runtime-ktx:2.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementation("com.google.code.gson:gson:2.10.1")
-    implementation("io.coil-kt:coil-compose:2.4.0")
-    
-    // Room database
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
-    implementation("com.google.accompanist:accompanist-drawablepainter:0.32.0")
-    
-    // Additional WorkManager and coroutines
-    implementation("androidx.work:work-runtime-ktx:2.9.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
-    
+    implementation(libs.androidx.material.icons.extended)
+    implementation(libs.androidx.lifecycle.service)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.gson)
+    implementation(libs.coil.compose)
+
+    // Room dependencies are retained but not used by current local persistence.
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.accompanist.drawablepainter)
+
+    // Compose lifecycle integration
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+
     // Google Sign-In and Drive API
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation(libs.play.services.auth)
     // implementation("com.google.api-client:google-api-client-android:2.2.0")
     // implementation("com.google.apis:google-api-services-drive:v3-rev20220815-2.0.0")
     // implementation("com.google.http-client:google-http-client-gson:1.43.3")
-    
+
     // Additional authentication
-    implementation("androidx.credentials:credentials:1.2.2")
-    implementation("androidx.credentials:credentials-play-services-auth:1.2.2")
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
-    
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.google.identity)
+
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+}
+
+// Resolve actual selected versions (including BOM constraints and transitives), not TOML declarations.
+tasks.register("exportDependencyInventory") {
+    group = "verification"
+    description = "Export selected app/test classpaths for the CI OSV check"
+    val inventory = layout.buildDirectory.file("reports/dependencies/maven-inventory.txt")
+    outputs.file(inventory)
+    outputs.upToDateWhen { false }
+    notCompatibleWithConfigurationCache("Resolves project configurations at execution time")
+    doLast {
+        val coordinates = sortedSetOf<String>()
+        listOf(
+            "debugCompileClasspath", "debugRuntimeClasspath",
+            "releaseCompileClasspath", "releaseRuntimeClasspath",
+            "debugUnitTestCompileClasspath", "debugUnitTestRuntimeClasspath",
+            "debugAndroidTestCompileClasspath", "debugAndroidTestRuntimeClasspath"
+        ).forEach { name ->
+            val result = configurations.getByName(name).incoming.resolutionResult
+            val unresolved = result.allDependencies.filterIsInstance<
+                org.gradle.api.artifacts.result.UnresolvedDependencyResult>()
+            check(unresolved.isEmpty()) { "Unresolved dependencies in $name: $unresolved" }
+            result.allComponents.forEach { component ->
+                val id = component.id as? org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                if (id != null) coordinates.add("${id.group}:${id.module}:${id.version}")
+            }
+        }
+        check(coordinates.isNotEmpty()) { "Dependency inventory is empty" }
+        inventory.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(coordinates.joinToString("\n", postfix = "\n"))
+        }
+    }
 }

@@ -17,16 +17,20 @@ import java.util.concurrent.TimeUnit
 
 class MindVaultApplication : Application() {
     val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     companion object {
         lateinit var instance: MindVaultApplication
             private set
     }
+
     override fun onCreate() {
         super.onCreate()
         instance = this
-        AuthManager.init(this)
+        // Do not catch recovery failures and continue: managers must never load a mixed image.
+        // This startup barrier is intentionally synchronous, including after process death.
+        com.example.mindvault.data.LocalRestore.recoverAtStartup(this)
         Log.d("MindVaultApplication", "Application onCreate() called")
-        
+
         // Create a simple file to verify this method is called
         try {
             val file = java.io.File(filesDir, "app_started.txt")
@@ -35,7 +39,7 @@ class MindVaultApplication : Application() {
         } catch (e: Exception) {
             Log.e("MindVaultApplication", "Error creating verification file", e)
         }
-        
+
         // Initialize managers
         try {
             FocusManager.init(this)
@@ -44,11 +48,13 @@ class MindVaultApplication : Application() {
             AppPasswordManager.init(this)
             // Create notification channels
             com.example.mindvault.notifications.NotificationHelper.createNotificationChannels(this)
-            
+
             Log.d("MindVaultApplication", "All managers initialized successfully")
         } catch (e: Exception) {
             Log.e("MindVaultApplication", "Error initializing managers", e)
         }
+
+        AuthManager.init(this)
 
         // Schedule periodic background backups (runs even if app not in foreground)
         try {

@@ -24,6 +24,14 @@ class FocusReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         if (intent?.action != ACTION_FOCUS_REMINDER) return
 
+        val config = FocusManager.getCurrentConfiguration()
+        if (!config.focusModeEnabled) return
+        val now = java.time.LocalTime.now()
+        val upcoming = config.timeSlots.any {
+            val seconds = (it.startTime.toSecondOfDay() - now.toSecondOfDay() + 86400) % 86400
+            seconds in 1..300
+        }
+        if (!upcoming) return // Ignore stale or late deliveries from inexact repeating alarms.
         Log.i(TAG, "Focus reminder alarm fired — checking permissions")
 
         // Check if accessibility is enabled

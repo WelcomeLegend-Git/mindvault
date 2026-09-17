@@ -24,17 +24,15 @@ object FocusDataStore {
             .create()
     }
 
+    @Synchronized
     fun saveConfiguration(context: Context, config: FocusConfiguration) {
+        LocalRestore.checkWritable()
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val editor = prefs.edit()
-        try {
-            val json = gson.toJson(config)
-            editor.putString(CONFIG_KEY, json)
-            editor.commit() // Using commit for synchronous save
-            Log.d("FocusDataStore", "Configuration saved successfully: $json")
-        } catch (e: Exception) {
-            Log.e("FocusDataStore", "Error saving configuration", e)
-        }
+        val json = gson.toJson(config)
+        ManagerPersistence.attribute(context, prefs, prefs.edit())
+            .putString(CONFIG_KEY, json)
+            .putBoolean(FOCUS_MODE_ENABLED_KEY, config.focusModeEnabled)
+            .apply()
     }
 
     fun getConfiguration(context: Context): FocusConfiguration {
@@ -44,31 +42,34 @@ object FocusDataStore {
             try {
                 val type = object : TypeToken<FocusConfiguration>() {}.type
                 val config = gson.fromJson<FocusConfiguration>(json, type)
-                Log.d("FocusDataStore", "Configuration loaded successfully: $json")
+
                 if (config != null) {
                     // Sanitize the config to ensure lists are never null due to Gson reflection
                     val nonNullTimeSlots = config.timeSlots ?: emptyList()
                     val nonNullSelectedApps = config.selectedApps ?: emptyList()
                     return config.copy(
                         timeSlots = nonNullTimeSlots,
-                        selectedApps = nonNullSelectedApps
+                        selectedApps = nonNullSelectedApps,
+                        focusModeEnabled = prefs.getBoolean(FOCUS_MODE_ENABLED_KEY, config.focusModeEnabled)
                     )
                 } else {
-                    return FocusConfiguration()
+                    return FocusConfiguration(focusModeEnabled = getFocusModeEnabled(context))
                 }
             } catch (e: Exception) {
                 Log.e("FocusDataStore", "Error parsing configuration JSON", e)
-                FocusConfiguration() // Return default config on error
+                FocusConfiguration(focusModeEnabled = getFocusModeEnabled(context))
             }
         } else {
             Log.d("FocusDataStore", "No configuration found, returning default.")
-            FocusConfiguration() // Return default if no config saved
+            FocusConfiguration(focusModeEnabled = getFocusModeEnabled(context))
         }
     }
 
+    @Synchronized
     fun setFocusModeEnabled(context: Context, enabled: Boolean) {
+        LocalRestore.checkWritable()
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putBoolean(FOCUS_MODE_ENABLED_KEY, enabled).apply()
+        ManagerPersistence.attribute(context, prefs, prefs.edit()).putBoolean(FOCUS_MODE_ENABLED_KEY, enabled).apply()
     }
 
     fun getFocusModeEnabled(context: Context): Boolean {

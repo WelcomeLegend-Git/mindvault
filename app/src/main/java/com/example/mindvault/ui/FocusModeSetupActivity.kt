@@ -75,11 +75,11 @@ class FocusModeSetupActivity : ComponentActivity() {
         setContent {
             MindVaultTheme {
                 var isSaving by remember { mutableStateOf(false) }
-                
+
                 FocusModeSetupScreen(
                     viewModel = viewModel,
                     isSaving = isSaving,
-                    onBackPressed = { 
+                    onBackPressed = {
                         if (!isSaving) {
                             finish()
                         }
@@ -87,33 +87,23 @@ class FocusModeSetupActivity : ComponentActivity() {
                     onSaveConfiguration = {
                         if (!isSaving) {
                             isSaving = true
-                            
-                            try {
-                                Log.d("FocusModeSetupActivity", "Starting save operation...")
-                                
-                                // Save configuration
-                                viewModel.saveConfiguration(this@FocusModeSetupActivity)
-                                
-                                // Show success message
-                                Toast.makeText(
-                                    this@FocusModeSetupActivity, 
-                                    "Configuration saved successfully!", 
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                
-                                // Small delay to ensure everything is saved
-                                android.os.Handler(mainLooper).postDelayed({
+                            Log.d("FocusModeSetupActivity", "Starting save operation...")
+                            viewModel.saveConfiguration { ok ->
+                                if (ok) {
+                                    Toast.makeText(
+                                        this@FocusModeSetupActivity,
+                                        "Configuration saved successfully!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     finish()
-                                }, 500)
-                                
-                            } catch (e: Exception) {
-                                Log.e("FocusModeSetupActivity", "Error saving configuration", e)
-                                Toast.makeText(
-                                    this@FocusModeSetupActivity, 
-                                    "Error saving configuration", 
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                isSaving = false
+                                } else {
+                                    Toast.makeText(
+                                        this@FocusModeSetupActivity,
+                                        "Error saving configuration",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    isSaving = false
+                                }
                             }
                         }
                     }
@@ -162,7 +152,7 @@ fun FocusModeSetupScreen(
             .systemBarsPadding()
     ) {
         TopAppBar(
-            title = { 
+            title = {
                 Text(
                     text = "Focus Mode Setup",
                     color = Color.White,
@@ -582,7 +572,7 @@ fun AppListItem(
     onSelectionChanged: (Boolean) -> Unit
 ) {
     val rowAlpha = if (isLocked) 0.6f else 1f
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -604,9 +594,9 @@ fun AppListItem(
                 .size(40.dp)
                 .clip(CircleShape)
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Text(
             text = appInfo.appName,
             modifier = Modifier.weight(1f),
@@ -614,7 +604,7 @@ fun AppListItem(
             overflow = TextOverflow.Ellipsis,
             fontSize = 16.sp
         )
-        
+
         Checkbox(
             checked = isSelected,
             onCheckedChange = { checked ->
@@ -637,7 +627,7 @@ fun AppSelectionDialog(
     onAppsSelected: (List<String>) -> Unit
 ) {
     var tempSelectedApps by remember { mutableStateOf(selectedApps.toSet()) }
-    
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Apps") },
@@ -668,7 +658,7 @@ fun AppSelectionDialog(
                     ) { appInfo ->
                         val isLocked = isFocusModeActive && selectedApps.contains(appInfo.packageName)
                         val isSelected = tempSelectedApps.contains(appInfo.packageName)
-                        
+
                         AppListItem(
                             appInfo = appInfo,
                             isSelected = isSelected,
@@ -763,14 +753,14 @@ fun TimeSlotDialog(
             ) {
                 Text(
                     text = if (isSettingStartTime) "Set Start Time" else "Set End Time",
-                    style = MaterialTheme.typography.headlineSmall, 
-                    color = Color.White, 
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Time Pickers
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
                 TimePicker(
                     state = activeTimePickerState,
@@ -806,7 +796,7 @@ fun TimeSlotDialog(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (type == FocusType.STUDY_TIME) "Study" else "Rest",
-                                color = Color.White, 
+                                color = Color.White,
                                 fontWeight = FontWeight.Medium
                             )
                         }
@@ -822,7 +812,7 @@ fun TimeSlotDialog(
                 ) {
                     if (isSettingStartTime) {
                         Button(
-                            onClick = onDismiss, 
+                            onClick = onDismiss,
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
                         ) {
@@ -837,7 +827,7 @@ fun TimeSlotDialog(
                         }
                     } else {
                         Button(
-                            onClick = { isSettingStartTime = true }, 
+                            onClick = { isSettingStartTime = true },
                             modifier = Modifier.weight(1f),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.DarkGray)
                         ) {

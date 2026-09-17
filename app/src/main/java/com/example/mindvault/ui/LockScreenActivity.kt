@@ -3,6 +3,7 @@ package com.example.mindvault.ui
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -34,10 +35,16 @@ import androidx.compose.ui.res.painterResource
 import com.example.mindvault.R
 import com.example.mindvault.data.AppPasswordManager
 import com.example.mindvault.ui.theme.MindVaultTheme
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 class LockScreenActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        onBackPressedDispatcher.addCallback(this) {
+            // Exit the task rather than reveal the protected activity underneath.
+            finishAffinity()
+        }
         setContent {
             MindVaultTheme {
                 LockScreen(onUnlock = {
@@ -47,12 +54,6 @@ class LockScreenActivity : ComponentActivity() {
         }
     }
 
-    @Deprecated("Deprecated in Java")
-    override fun onBackPressed() {
-        // Prevent user from backing out of the lock screen
-        // You can optionally show a toast or exit the app
-        finishAffinity() // Closes the app
-    }
 }
 
 @Composable
@@ -60,6 +61,8 @@ fun LockScreen(onUnlock: () -> Unit) {
     val context = LocalContext.current
     var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
+    var isBusy by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Box(
         modifier = Modifier
@@ -128,6 +131,7 @@ fun LockScreen(onUnlock: () -> Unit) {
             Spacer(modifier = Modifier.height(32.dp))
 
             TextField(
+                enabled = !isBusy,
                 value = password,
                 onValueChange = { password = it },
                 modifier = Modifier
@@ -148,7 +152,7 @@ fun LockScreen(onUnlock: () -> Unit) {
                 trailingIcon = {
                     val image = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff
                     val description = if (isPasswordVisible) "Hide password" else "Show password"
-                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }, enabled = !isBusy) {
                         Icon(imageVector = image, description, tint = Color(0xFFFFD700))
                     }
                 },
@@ -166,11 +170,26 @@ fun LockScreen(onUnlock: () -> Unit) {
             Spacer(modifier = Modifier.height(24.dp))
 
             Button(
+                enabled = !isBusy,
                 onClick = {
-                    if (AppPasswordManager.verifyPassword(password)) {
-                        onUnlock()
-                    } else {
-                        Toast.makeText(context, "Incorrect Password", Toast.LENGTH_SHORT).show()
+                    if (isBusy) return@Button
+                    val submittedPassword = password
+                    isBusy = true
+                    scope.launch {
+                        try {
+                            if (AppPasswordManager.verifyPassword(submittedPassword)) {
+                                onUnlock()
+                            } else {
+                                Toast.makeText(context, "Incorrect Password", Toast.LENGTH_SHORT).show()
+                            }
+                        } catch (cancelled: CancellationException) {
+                            throw cancelled
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Unable to verify password. Please try again.", Toast.LENGTH_SHORT)
+                                .show()
+                        } finally {
+                            isBusy = false
+                        }
                     }
                 },
                 modifier = Modifier

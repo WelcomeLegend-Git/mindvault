@@ -14,6 +14,7 @@ import com.example.mindvault.utils.PermissionManager
 import com.example.mindvault.utils.AppManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,9 +25,18 @@ import java.util.Calendar
 import com.example.mindvault.receivers.FocusReminderReceiver
 
 object FocusManager {
+    @Volatile
     private lateinit var appContext: Context
+
+    @Volatile
     private var currentConfiguration: FocusConfiguration = FocusConfiguration()
     private val coroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val transitionLock = Any()
+
+    internal fun <T> withPersistenceLock(block: () -> T): T = synchronized(transitionLock) { block() }
+
+    @Volatile
+    private var monitorJob: Job? = null
 
     private val _activeSlotFlow = MutableStateFlow<TimeSlot?>(null)
     val activeSlotFlow = _activeSlotFlow.asStateFlow()
@@ -34,48 +44,77 @@ object FocusManager {
     private val _configurationFlow = MutableStateFlow(FocusConfiguration())
     val configurationFlow = _configurationFlow.asStateFlow()
 
+    @Volatile
     private var focusModeEnabled: Boolean = true
 
+    @Volatile
+    private var initialized = false
+
     fun init(context: Context) {
+        // Restore already owns transitionLock and intentionally reloads; repeated UI init
+        // must not wait behind the restore disk transaction just to reload the same cache.
+        if (initialized && !Thread.holdsLock(transitionLock)) return
+        initialize(context)
+    }
+
+    private fun initialize(context: Context): Unit = synchronized(transitionLock) {
+        if (!ManagerPersistence.writable() && ::appContext.isInitialized) return
+        LocalRestore.checkWritable()
         Log.d("FocusManager", "Initializing FocusManager")
+
         appContext = context.applicationContext
         currentConfiguration = FocusDataStore.getConfiguration(appContext)
         focusModeEnabled = FocusDataStore.getFocusModeEnabled(appContext)
         currentConfiguration = currentConfiguration.copy(focusModeEnabled = focusModeEnabled)
         _configurationFlow.value = currentConfiguration
-        
+
         // Initialize StatisticsManager
         StatisticsManager.init(appContext)
-        
+
         Log.d("FocusManager", "FocusManager initialized with ${currentConfiguration.timeSlots.size} time slots")
-        startMonitoring()
+        // Idempotent: init is called from Application, MainActivity, BootReceiver and cloud
+        // restore — the process must own exactly one monitoring loop.
+        if (monitorJob?.isActive != true) {
+            monitorJob = startMonitoring()
+        }
+        // A fresh process (e.g. after boot) must restore reminder alarms, which Android
+        // clears on reboot.
+        initialized = true
+        coroutineScope.launch {
+            try {
+                schedulePreSessionReminders()
+            } catch (failure: Exception) {
+                Log.e("FocusManager", "Could not schedule focus reminders", failure)
+            }
+        }
     }
-    
+
     fun isInitialized(): Boolean {
         return ::appContext.isInitialized
     }
-    
+
     fun areAllPermissionsGranted(): Boolean {
         if (!::appContext.isInitialized) {
             return false
         }
         return PermissionManager.hasOverlayPermission(appContext) &&
-               AppManager.hasNotificationListenerPermission(appContext) &&
-               PermissionManager.isAccessibilityServiceEnabled(appContext)
+                AppManager.hasNotificationListenerPermission(appContext) &&
+                PermissionManager.isAccessibilityServiceEnabled(appContext)
     }
 
-    fun updateConfiguration(config: FocusConfiguration) {
+    fun updateConfiguration(config: FocusConfiguration): Unit = synchronized(transitionLock) {
+        LocalRestore.checkWritable()
         if (!::appContext.isInitialized) {
-            Log.e("FocusManager", "FocusManager not initialized! Cannot update configuration")
-            return
+            error("FocusManager not initialized")
         }
         Log.d("FocusManager", "Updating configuration with ${config.timeSlots.size} slots.")
 
         // 1. Save the new configuration to persistent storage
-        FocusDataStore.saveConfiguration(appContext, config)
+        val updated = config.copy(focusModeEnabled = focusModeEnabled)
+        FocusDataStore.saveConfiguration(appContext, updated)
 
         // Immediately reload the configuration to ensure the in-memory state is up-to-date
-                currentConfiguration = FocusDataStore.getConfiguration(appContext)
+        currentConfiguration = updated
         _configurationFlow.value = currentConfiguration
         Log.d("FocusManager", "Configuration reloaded. Active slots: ${currentConfiguration.timeSlots.size}")
 
@@ -96,9 +135,6 @@ object FocusManager {
     }
 
 
-
-
-
     fun getCurrentConfiguration(): FocusConfiguration {
         if (!::appContext.isInitialized) {
             Log.e("FocusManager", "FocusManager not initialized! Returning empty configuration")
@@ -107,7 +143,7 @@ object FocusManager {
         Log.d("FocusManager", "Getting current configuration with ${currentConfiguration.timeSlots.size} time slots")
         return currentConfiguration
     }
-    
+
     fun getCurrentActiveSlot(): TimeSlot? {
         if (!::appContext.isInitialized) {
             Log.e("FocusManager", "FocusManager not initialized! Cannot get active slot")
@@ -118,21 +154,22 @@ object FocusManager {
             isTimeInRange(currentTime, slot.startTime, slot.endTime)
         }
     }
-    
+
     fun isAppBlocked(packageName: String): Boolean {
         if (!::appContext.isInitialized) {
             Log.e("FocusManager", "FocusManager not initialized! Cannot check if app is blocked")
             return false
         }
+        if (!currentConfiguration.focusModeEnabled) return false
         val activeSlot = getCurrentActiveSlot() ?: return false
         val isSelectedApp = currentConfiguration.selectedApps.contains(packageName)
-        
+
         return when (activeSlot.type) {
-                FocusType.STUDY_TIME -> isSelectedApp // Block selected apps during study time
-                FocusType.REST_TIME -> !isSelectedApp // Block non-selected apps during rest time
-            }
+            FocusType.STUDY_TIME -> isSelectedApp // Block selected apps during study time
+            FocusType.REST_TIME -> !isSelectedApp // Block non-selected apps during rest time
+        }
     }
-    
+
     private fun isTimeInRange(current: LocalTime, start: LocalTime, end: LocalTime): Boolean {
         // Handle overnight sessions (e.g., 11 PM to 7 AM)
         return if (start.isAfter(end)) {
@@ -142,7 +179,7 @@ object FocusManager {
             (current.isAfter(start) || current == start) && current.isBefore(end)
         }
     }
-    
+
     fun isFocusModeActive(): Boolean {
         if (!::appContext.isInitialized) {
             Log.e("FocusManager", "FocusManager not initialized! Cannot check if focus mode is active")
@@ -150,9 +187,9 @@ object FocusManager {
         }
         return getCurrentActiveSlot() != null && currentConfiguration.focusModeEnabled
     }
-    
-    private fun startMonitoring() {
-        coroutineScope.launch {
+
+    private fun startMonitoring(): Job {
+        return coroutineScope.launch {
             while (true) {
                 checkAndUpdateActiveSlot()
                 delay(1000) // Check every second
@@ -161,32 +198,47 @@ object FocusManager {
     }
 
     private fun checkAndUpdateActiveSlot() {
-        val currentTime = LocalTime.now()
-        val potentialActiveSlot = currentConfiguration.timeSlots.find {
-            isTimeInRange(currentTime, it.startTime, it.endTime)
-        }
-        
-        // Only consider slot "active" if all permissions are granted AND focusModeEnabled is true
-        val activeSlot = if (areAllPermissionsGranted() && currentConfiguration.focusModeEnabled) potentialActiveSlot else null
+        // Serialize transitions: the monitor loop, configuration updates and the focus
+        // toggle all converge here, and the check/side-effect/update sequence must be atomic.
+        synchronized(transitionLock) {
+            // Quarantine suppresses persistence, not time/permission-based enforcement using
+            // the last published configuration. StatisticsManager declines writes separately.
+            StatisticsManager.observeActivePrincipal()
+            val currentTime = LocalTime.now()
+            val potentialActiveSlot = currentConfiguration.timeSlots.find {
+                isTimeInRange(currentTime, it.startTime, it.endTime)
+            }
 
-        if (_activeSlotFlow.value?.id != activeSlot?.id) {
-            // End previous session if there was one (handles both → null and → different slot)
-            if (_activeSlotFlow.value != null) {
-                StatisticsManager.endFocusSession(completed = true)
-                Log.d("FocusManager", "Ended focus session")
-            }
-            
-            // Start new session if entering a slot AND permissions are granted
-            if (activeSlot != null) {
-                StatisticsManager.startFocusSession(
-                    type = activeSlot.type.name,
-                    blockedApps = currentConfiguration.selectedApps
+            // Only consider slot "active" if all permissions are granted AND focusModeEnabled is true
+            val activeSlot =
+                if (areAllPermissionsGranted() && currentConfiguration.focusModeEnabled) potentialActiveSlot else null
+
+            if (_activeSlotFlow.value?.id != activeSlot?.id) {
+                // End previous session if there was one (handles both → null and → different slot)
+                if (_activeSlotFlow.value != null) {
+                    // A session that ends because its window passed is "completed"; one cut
+                    // short by revoked permissions or a disabled toggle is an interruption.
+                    val previousSlot = checkNotNull(_activeSlotFlow.value)
+                    val windowEnded = !isTimeInRange(currentTime, previousSlot.startTime, previousSlot.endTime)
+                    StatisticsManager.endFocusSession(completed = windowEnded)
+                    Log.d("FocusManager", "Ended focus session (completed=$windowEnded)")
+                }
+
+                // Start new session if entering a slot AND permissions are granted
+                if (activeSlot != null) {
+                    StatisticsManager.startFocusSession(
+                        type = activeSlot.type.name,
+                        blockedApps = currentConfiguration.selectedApps
+                    )
+                    Log.d("FocusManager", "Started focus session: ${activeSlot.type}")
+                }
+
+                _activeSlotFlow.value = activeSlot
+                Log.d(
+                    "FocusManager",
+                    "Active slot changed: ${activeSlot?.type ?: "None"} (Permissions: ${areAllPermissionsGranted()})"
                 )
-                Log.d("FocusManager", "Started focus session: ${activeSlot.type}")
             }
-            
-            _activeSlotFlow.value = activeSlot
-            Log.d("FocusManager", "Active slot changed: ${activeSlot?.type ?: "None"} (Permissions: ${areAllPermissionsGranted()})")
         }
     }
 
@@ -195,16 +247,19 @@ object FocusManager {
             Log.e("FocusManager", "FocusManager not initialized! Cannot get next slot info")
             return "Focus mode not initialized"
         }
-        
+
         if (currentConfiguration.timeSlots.isEmpty()) {
             Log.d("FocusManager", "No time slots configured")
             return "No time slots configured"
         }
-        
+
         val currentTime = LocalTime.now()
         Log.d("FocusManager", "Current time: $currentTime")
-        Log.d("FocusManager", "Available time slots: ${currentConfiguration.timeSlots.map { "${it.startTime}-${it.endTime} (${it.type})" }}")
-        
+        Log.d(
+            "FocusManager",
+            "Available time slots: ${currentConfiguration.timeSlots.map { "${it.startTime}-${it.endTime} (${it.type})" }}"
+        )
+
         // Find the next upcoming slot
         val upcomingSlots = currentConfiguration.timeSlots
             .filter { slot ->
@@ -214,7 +269,7 @@ object FocusManager {
                 isUpcoming
             }
             .sortedBy { it.startTime }
-        
+
         return if (upcomingSlots.isNotEmpty()) {
             val nextSlot = upcomingSlots.first()
             val typeDisplay = when (nextSlot.type) {
@@ -241,13 +296,19 @@ object FocusManager {
         }
     }
 
-    fun setFocusModeEnabled(enabled: Boolean) {
+    fun setFocusModeEnabled(enabled: Boolean): Unit = synchronized(transitionLock) {
+        if (!ManagerPersistence.writable()) {
+            Log.w("FocusManager", "Focus toggle not saved: local recovery requires restart")
+            return
+        }
         if (!::appContext.isInitialized) return
         focusModeEnabled = enabled
         FocusDataStore.setFocusModeEnabled(appContext, enabled)
         currentConfiguration = currentConfiguration.copy(focusModeEnabled = enabled)
         _configurationFlow.value = currentConfiguration
         checkAndUpdateActiveSlot()
+        // Keep reminder alarms in sync with the toggle (cancel when disabled, restore when enabled).
+        schedulePreSessionReminders()
     }
 
     fun getFocusModeEnabled(): Boolean {
@@ -259,13 +320,14 @@ object FocusManager {
      * When the alarm fires, FocusReminderReceiver checks if permissions are
      * granted and sends a notification if they're missing.
      */
-    fun schedulePreSessionReminders() {
+    fun schedulePreSessionReminders(): Unit = synchronized(transitionLock) {
         if (!::appContext.isInitialized) return
 
         val am = appContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-        // Cancel all existing reminder alarms (IDs 10000-10099)
-        for (i in 0 until 100) {
+        val reminderPrefs = appContext.getSharedPreferences("mindvault_reminders", Context.MODE_PRIVATE)
+        val previousCount = reminderPrefs.getInt("scheduled_count", 100)
+        for (i in 0 until maxOf(100, previousCount, currentConfiguration.timeSlots.size)) {
             val cancelIntent = Intent(appContext, FocusReminderReceiver::class.java).apply {
                 action = FocusReminderReceiver.ACTION_FOCUS_REMINDER
             }
@@ -280,6 +342,7 @@ object FocusManager {
 
         // Schedule new alarms for each time slot
         val slots = currentConfiguration.timeSlots
+        reminderPrefs.edit().putInt("scheduled_count", slots.size).apply()
         if (!currentConfiguration.focusModeEnabled || slots.isEmpty()) {
             Log.d("FocusManager", "No slots or focus disabled — skipped reminder scheduling")
             return

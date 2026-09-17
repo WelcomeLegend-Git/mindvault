@@ -34,6 +34,9 @@ Thumbs.db
 
 # Secrets
 google-services.json
+keystore.properties
+.env
+.env.*
 *.keystore
 *.jks
 

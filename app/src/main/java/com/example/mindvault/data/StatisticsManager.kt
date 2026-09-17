@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
+
 import kotlin.math.roundToInt
 import com.example.mindvault.MindVaultApplication
 import kotlinx.coroutines.launch
@@ -66,25 +66,47 @@ data class UserStats(
 object StatisticsManager {
     private lateinit var context: Context
     private lateinit var prefs: SharedPreferences
-    
+
+    @Volatile
+    private var initialized = false
+    private var lastCheckpointElapsed = 0L
+
     private val _currentSession = MutableStateFlow<FocusSessionRecord?>(null)
     val currentSession = _currentSession.asStateFlow()
-    
+
     private val _dailyStats = MutableStateFlow<DailyStats?>(null)
     val dailyStats = _dailyStats.asStateFlow()
-    
+
     private val _weeklyStats = MutableStateFlow<WeeklyStats?>(null)
     val weeklyStats = _weeklyStats.asStateFlow()
-    
+
     private val _userStats = MutableStateFlow<UserStats?>(null)
     val userStats = _userStats.asStateFlow()
-    
+
     fun init(context: Context) {
+        if (initialized) return
+        initialize(context)
+    }
+
+    @Synchronized
+    private fun initialize(context: Context) {
+        if (initialized) return
+        LocalRestore.checkWritable()
         this.context = context.applicationContext
         this.prefs = context.getSharedPreferences("mindvault_stats", Context.MODE_PRIVATE)
         migrateHoursToMinutes()
         loadStats()
+        initialized = true
         Log.d("StatisticsManager", "Statistics Manager initialized")
+    }
+
+    @Synchronized
+    internal fun reloadAfterRestore() {
+        LocalRestore.checkWritable()
+        check(_currentSession.value == null) { "Cannot reload statistics during focus" }
+        lastCheckpointElapsed = 0L
+        migrateHoursToMinutes()
+        loadStats()
     }
 
     /**
@@ -99,15 +121,23 @@ object StatisticsManager {
                 .putLong("total_focus_minutes", migratedMinutes)
                 .remove("total_focus_hours")
                 .apply()
-            Log.d("StatisticsManager", "Migrated total_focus_hours ($oldHours h) → total_focus_minutes ($migratedMinutes min)")
+            Log.d(
+                "StatisticsManager",
+                "Migrated total_focus_hours ($oldHours h) → total_focus_minutes ($migratedMinutes min)"
+            )
         }
     }
-    
+
     fun isInitialized(): Boolean {
-        return ::context.isInitialized
+        return initialized
     }
-    
+
+    @Synchronized
     fun startFocusSession(type: String, blockedApps: List<String>) {
+        if (!ManagerPersistence.writable()) return
+        check(initialized) { "StatisticsManager must be initialized before starting a session" }
+        // A duplicate start must not discard an active session or reset its checkpoint.
+        if (_currentSession.value != null) return
         val session = FocusSessionRecord(
             id = generateSessionId(),
             startTime = LocalDateTime.now(),
@@ -119,25 +149,54 @@ object StatisticsManager {
         saveCurrentSession(session)
         Log.d("StatisticsManager", "Started focus session: $type")
     }
-    
+
+    @Synchronized
     fun endFocusSession(completed: Boolean = true) {
+        if (!ManagerPersistence.writable()) return
         val session = _currentSession.value ?: return
         val endedSession = session.copy(
-            endTime = LocalDateTime.now(),
+            endTime = LocalDateTime.now().coerceAtLeast(session.startTime),
             isCompleted = completed
         )
+        finalizeSession(endedSession)
         _currentSession.value = null
-        saveSessionRecord(endedSession)
-        updateDailyStats(endedSession)
-        updateUserStats(endedSession)
-        clearCurrentSession()
+        refreshStats()
         Log.d("StatisticsManager", "Ended focus session: ${session.type}, completed: $completed")
         MindVaultApplication.instance.applicationScope.launch {
             AuthManager.syncUserDataToCloud()
         }
     }
-    
+
+    /** Account switches during a long-running session must taint its provenance even before
+     * the next accounting checkpoint. This does not change session timing or focus behavior. */
+    @Synchronized
+    internal fun observeActivePrincipal() {
+        if (!ManagerPersistence.writable() || !initialized || _currentSession.value == null) return
+        try {
+            val token = prefs.getString(DeviceDataOwnership.KEY, null)
+            if (token == DeviceDataOwnership.UNKNOWN || token == DeviceDataOwnership.UNOWNED) return
+            ManagerPersistence.observe(context, prefs)
+        } catch (failure: Exception) {
+            // A provenance/storage failure must fail cloud persistence closed, not terminate
+            // the focus monitor that enforces the already-published schedule.
+            LocalRestore.blockUntilRestart()
+            Log.e("StatisticsManager", "Provenance unavailable; persistence quarantined", failure)
+        }
+    }
+
+    /** Writes are throttled to 30 seconds using a monotonic clock. Process recovery credits
+     * only through the last persisted observation; this method does not reconcile slots. */
+    @Synchronized
+    fun checkpointActiveSession() {
+        if (!ManagerPersistence.writable()) return
+        val session = _currentSession.value ?: return
+        if (android.os.SystemClock.elapsedRealtime() - lastCheckpointElapsed < 30_000L) return
+        saveCurrentSession(session)
+    }
+
+    @Synchronized
     fun recordDistraction(appPackage: String) {
+        if (!ManagerPersistence.writable()) return
         val session = _currentSession.value ?: return
         val updatedSession = session.copy(
             distractionCount = session.distractionCount + 1
@@ -146,30 +205,34 @@ object StatisticsManager {
         saveCurrentSession(updatedSession)
         Log.d("StatisticsManager", "Recorded distraction: $appPackage")
     }
-    
+
     private fun loadStats() {
-        loadDailyStats()
-        loadWeeklyStats()
-        loadUserStats()
         loadCurrentSession()
+        refreshStats()
     }
-    
-    private fun loadDailyStats() {
+
+    private fun refreshStats() {
         val today = LocalDate.now()
+        loadDailyStats(today)
+        loadWeeklyStats(today)
+        loadUserStats(today)
+    }
+
+    private fun loadDailyStats(today: LocalDate) {
         val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        
+
         val totalFocusTime = prefs.getLong("daily_focus_${dateKey}", 0L).coerceAtLeast(0L)
         val studyTime = prefs.getLong("daily_study_${dateKey}", 0L).coerceAtLeast(0L)
         val restTime = prefs.getLong("daily_rest_${dateKey}", 0L).coerceAtLeast(0L)
         val completedSessions = prefs.getInt("daily_completed_${dateKey}", 0).coerceAtLeast(0)
         val totalSessions = prefs.getInt("daily_total_${dateKey}", 0).coerceAtLeast(0)
         val distractionCount = prefs.getInt("daily_distractions_${dateKey}", 0).coerceAtLeast(0)
-        
+
         // Ensure data consistency
         val validatedStudyTime = studyTime.coerceAtMost(totalFocusTime)
         val validatedRestTime = restTime.coerceAtMost(totalFocusTime - validatedStudyTime)
         val validatedCompletedSessions = completedSessions.coerceAtMost(totalSessions)
-        
+
         _dailyStats.value = DailyStats(
             date = today,
             totalFocusTime = totalFocusTime,
@@ -182,18 +245,17 @@ object StatisticsManager {
             topBlockedApps = getTopBlockedApps(today)
         )
     }
-    
-    private fun loadWeeklyStats() {
-        val today = LocalDate.now()
+
+    private fun loadWeeklyStats(today: LocalDate) {
         val weekStart = today.minusDays(today.dayOfWeek.value - 1L)
-        
+
         val dailyStatsList = mutableListOf<DailyStats>()
         var totalWeeklyFocus = 0L
-        
+
         for (i in 0..6) {
             val date = weekStart.plusDays(i.toLong())
             val dateKey = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
-            
+
             val dayStats = DailyStats(
                 date = date,
                 totalFocusTime = prefs.getLong("daily_focus_${dateKey}", 0L),
@@ -208,11 +270,11 @@ object StatisticsManager {
             dailyStatsList.add(dayStats)
             totalWeeklyFocus += dayStats.totalFocusTime
         }
-        
-        val currentStreak = calculateCurrentStreak()
+
+        val currentStreak = calculateCurrentStreak(today)
         val longestStreak = prefs.getInt("longest_streak", 0)
         val weeklyGoal = prefs.getLong("weekly_goal", 1200L) // 20 hours default
-        
+
         _weeklyStats.value = WeeklyStats(
             weekStart = weekStart,
             dailyStats = dailyStatsList,
@@ -224,13 +286,13 @@ object StatisticsManager {
             weeklyGoalProgress = (totalWeeklyFocus.toFloat() / weeklyGoal * 100).coerceAtMost(100f)
         )
     }
-    
-    private fun loadUserStats() {
+
+    private fun loadUserStats(today: LocalDate) {
         val totalMinutes = prefs.getLong("total_focus_minutes", 0L)
         val totalHours = totalMinutes / 60
         val totalSessions = prefs.getInt("total_sessions", 0)
         val avgSessionLength = if (totalSessions > 0) totalMinutes / totalSessions else 0L
-        val currentStreak = calculateCurrentStreak()
+        val currentStreak = calculateCurrentStreak(today)
         val longestStreak = prefs.getInt("longest_streak", 0)
         val totalXp = prefs.getInt("experience_points", 0)
         val (level, xpInLevel, xpForNextLevel) = calculateLevelAndProgress(totalXp)
@@ -251,8 +313,9 @@ object StatisticsManager {
             monthlyGoal = prefs.getLong("monthly_goal", 5000L)
         )
     }
-    
+
     private fun loadCurrentSession() {
+        if (_currentSession.value != null) return
         val sessionJson = prefs.getString("current_session", null)
         if (sessionJson != null) {
             try {
@@ -271,119 +334,95 @@ object StatisticsManager {
                     distractionCount = obj.optInt("distractionCount", 0),
                     isCompleted = false
                 )
-                // Recover the orphaned session — end it now so the time isn't lost
+                val lastObserved = runCatching {
+                    LocalDateTime.parse(obj.optString("lastObservedTime", ""))
+                }.getOrNull()
+                // Restart time is not evidence that focus continued while the process was dead.
                 val recovered = session.copy(
-                    endTime = LocalDateTime.now(),
-                    isCompleted = true
+                    endTime = SessionAccounting.recoveryEnd(
+                        session.startTime, lastObserved, LocalDateTime.now()
+                    ),
+                    isCompleted = false
                 )
                 Log.d("StatisticsManager", "Recovering orphaned session ${recovered.id} from ${recovered.startTime}")
-                saveSessionRecord(recovered)
-                updateDailyStats(recovered)
-                updateUserStats(recovered)
-                clearCurrentSession()
+                finalizeSession(recovered, attributeNewActivity = false)
+                MindVaultApplication.instance.applicationScope.launch {
+                    AuthManager.syncUserDataToCloud()
+                }
             } catch (e: Exception) {
                 Log.e("StatisticsManager", "Failed to restore session, clearing", e)
                 clearCurrentSession()
             }
         }
     }
-    
-    private fun updateDailyStats(session: FocusSessionRecord) {
-        val today = LocalDate.now()
-        val dateKey = today.format(DateTimeFormatter.ISO_LOCAL_DATE)
-        
-        val sessionDuration = if (session.endTime != null) {
-            ChronoUnit.MINUTES.between(session.startTime, session.endTime).coerceAtLeast(0L)
-        } else 0L
-        
-        val editor = prefs.edit()
-        
-        // Update totals with validation
-        val currentFocus = prefs.getLong("daily_focus_${dateKey}", 0L)
-        val newFocusTotal = (currentFocus + sessionDuration).coerceAtMost(1440L) // Max 24 hours per day
-        editor.putLong("daily_focus_${dateKey}", newFocusTotal)
-        
-        when (session.type) {
-            "STUDY_TIME" -> {
-                val currentStudy = prefs.getLong("daily_study_${dateKey}", 0L)
-                val newStudyTotal = (currentStudy + sessionDuration).coerceAtMost(newFocusTotal)
-                editor.putLong("daily_study_${dateKey}", newStudyTotal)
+
+    private fun updateDailyStats(session: FocusSessionRecord, editor: SharedPreferences.Editor) {
+        val allocations = SessionAccounting.split(
+            session.startTime, session.endTime, session.isCompleted, session.distractionCount
+        )
+        for (day in allocations) {
+            val dateKey = day.date.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val currentFocus = prefs.getLong("daily_focus_${dateKey}", 0L)
+            // Do not cap one side of the daily/lifetime ledger independently.
+            val newFocusTotal = currentFocus.coerceAtLeast(0L) + day.minutes
+            editor.putLong("daily_focus_${dateKey}", newFocusTotal)
+
+            when (session.type) {
+                "STUDY_TIME" -> {
+                    val currentStudy = prefs.getLong("daily_study_${dateKey}", 0L)
+                    editor.putLong("daily_study_${dateKey}", (currentStudy + day.minutes).coerceIn(0L, newFocusTotal))
+                }
+
+                "REST_TIME" -> {
+                    val currentRest = prefs.getLong("daily_rest_${dateKey}", 0L)
+                    editor.putLong("daily_rest_${dateKey}", (currentRest + day.minutes).coerceIn(0L, newFocusTotal))
+                }
             }
-            "REST_TIME" -> {
-                val currentRest = prefs.getLong("daily_rest_${dateKey}", 0L)
-                val newRestTotal = (currentRest + sessionDuration).coerceAtMost(newFocusTotal)
-                editor.putLong("daily_rest_${dateKey}", newRestTotal)
+
+            if (day.totalSessions > 0) {
+                val totalSessions = prefs.getInt("daily_total_${dateKey}", 0)
+                editor.putInt("daily_total_${dateKey}", totalSessions + day.totalSessions)
+                val completedSessions = prefs.getInt("daily_completed_${dateKey}", 0)
+                editor.putInt("daily_completed_${dateKey}", completedSessions + day.completedSessions)
+                val distractions = prefs.getInt("daily_distractions_${dateKey}", 0)
+                editor.putInt("daily_distractions_${dateKey}", distractions + day.distractions)
             }
-        }
-        
-        // Update session counts
-        val totalSessions = prefs.getInt("daily_total_${dateKey}", 0)
-        editor.putInt("daily_total_${dateKey}", totalSessions + 1)
-        
-        if (session.isCompleted) {
-            val completedSessions = prefs.getInt("daily_completed_${dateKey}", 0)
-            editor.putInt("daily_completed_${dateKey}", completedSessions + 1)
-        }
-        
-        // Update distractions with validation
-        val currentDistractions = prefs.getInt("daily_distractions_${dateKey}", 0)
-        val validatedDistractions = session.distractionCount.coerceAtLeast(0)
-        val newDistractionTotal = currentDistractions + validatedDistractions
-        editor.putInt("daily_distractions_${dateKey}", newDistractionTotal)
-        
-        editor.apply()
-        loadDailyStats()
-        MindVaultApplication.instance.applicationScope.launch {
-            AuthManager.syncUserDataToCloud()
         }
     }
-    
-    private fun updateUserStats(session: FocusSessionRecord) {
-        val sessionDuration = if (session.endTime != null) {
-            ChronoUnit.MINUTES.between(session.startTime, session.endTime).coerceAtLeast(0L)
-        } else 0L
-        
-        val editor = prefs.edit()
-        
-        // Update total focus minutes (precise, no rounding loss)
-        val currentMinutes = prefs.getLong("total_focus_minutes", 0L)
-        val newTotalMinutes = (currentMinutes + sessionDuration).coerceAtMost(6_000_000L) // Reasonable max
+
+    private fun updateUserStats(session: FocusSessionRecord, editor: SharedPreferences.Editor) {
+        val sessionDuration = SessionAccounting.totalMinutes(session.startTime, session.endTime)
+
+        // Use the same whole-session rounding as the sum of daily allocations.
+        val currentMinutes = prefs.getLong("total_focus_minutes", 0L).coerceAtLeast(0L)
+        val newTotalMinutes = currentMinutes + sessionDuration
         editor.putLong("total_focus_minutes", newTotalMinutes)
-        
+
         // Update total sessions with validation
         val totalSessions = prefs.getInt("total_sessions", 0).coerceAtLeast(0)
-        val newTotalSessions = (totalSessions + 1).coerceAtMost(50000) // Reasonable max
+        val newTotalSessions = totalSessions + 1
         editor.putInt("total_sessions", newTotalSessions)
-        
+
         // Update XP with improved calculation
         val xpGained = calculateXPGained(session, sessionDuration)
         val currentXP = prefs.getInt("experience_points", 0).coerceAtLeast(0)
         val newXP = (currentXP + xpGained).coerceAtMost(1000000) // Reasonable max
         editor.putInt("experience_points", newXP)
-        
-        // Update streaks only for completed sessions
-        if (session.isCompleted) {
-            updateStreaks(true)
-        }
-        
-        editor.apply()
-        loadUserStats()
-        MindVaultApplication.instance.applicationScope.launch {
-            AuthManager.syncUserDataToCloud()
-        }
+
+
     }
-    
+
     private fun calculateXPGained(session: FocusSessionRecord, duration: Long): Int {
         if (duration <= 0) return 0
-        
+
         // Base XP: 1 XP per minute, capped at reasonable amount
         var xp = duration.toInt().coerceAtMost(480) // Max 8 hours worth of base XP
-        
+
         // Completion bonus: significant reward for finishing sessions
         if (session.isCompleted) {
             xp = (xp * 1.5).toInt()
         }
-        
+
         // Focus quality bonus: reward for maintaining focus (low distractions)
         when (session.distractionCount) {
             0 -> xp = (xp * 1.3).toInt() // 30% bonus for perfect focus
@@ -391,7 +430,7 @@ object StatisticsManager {
             2 -> xp = (xp * 1.05).toInt() // 5% bonus for good focus
             // No bonus for 3+ distractions
         }
-        
+
         // Duration milestone bonuses
         when {
             duration >= 240 -> xp += 100 // 4+ hour milestone
@@ -399,12 +438,12 @@ object StatisticsManager {
             duration >= 60 -> xp += 25   // 1+ hour milestone
             duration >= 30 -> xp += 10   // 30+ minute milestone
         }
-        
+
         // Session type modifier
         if (session.type == "STUDY_TIME") {
             xp = (xp * 1.1).toInt() // Slight bonus for study sessions
         }
-        
+
         return xp.coerceIn(1, 1000) // Ensure reasonable XP range
     }
 
@@ -421,15 +460,15 @@ object StatisticsManager {
 
         return Triple(level, xpRemaining, xpForNext)
     }
-    
+
     private fun calculateLevel(xp: Int): Int {
         return (xp / 1000) + 1 // 1000 XP per level
     }
-    
+
     private fun calculateNextLevelXP(level: Int): Int {
         return level * 1000
     }
-    
+
     private fun calculateRank(level: Int): String {
         return when {
             level < 5 -> "Beginner"
@@ -438,11 +477,11 @@ object StatisticsManager {
             else -> "Zen Master"
         }
     }
-    
-    private fun calculateCurrentStreak(): Int {
+
+    private fun calculateCurrentStreak(today: LocalDate = LocalDate.now()): Int {
         var streak = 0
-        var date = LocalDate.now()
-        
+        var date = today
+
         // If today has no focus yet, allow the streak to continue from yesterday
         // (the day isn't over yet). But if yesterday also has no focus, streak is 0.
         if (!hadFocusOn(date)) {
@@ -451,43 +490,40 @@ object StatisticsManager {
                 return 0
             }
         }
-        
+
         // Count consecutive days backward from `date`
         while (hadFocusOn(date)) {
             streak++
             date = date.minusDays(1)
         }
-        
+
         return streak
     }
-    
+
     private fun updateStreaks(sessionCompleted: Boolean) {
         if (!sessionCompleted) return
-        
+
         val currentStreak = calculateCurrentStreak()
         val longestStreak = prefs.getInt("longest_streak", 0)
-        
+
         if (currentStreak > longestStreak) {
             prefs.edit().putInt("longest_streak", currentStreak).apply()
-            MindVaultApplication.instance.applicationScope.launch {
-                AuthManager.syncUserDataToCloud()
-            }
         }
     }
-    
+
     private fun getTopBlockedApps(date: LocalDate): List<String> {
         // Get blocked apps from actual sessions for this date
         val dateKey = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val sessionsJson = prefs.getString("sessions_${dateKey}", null)
-        
+
         if (sessionsJson.isNullOrEmpty()) {
             return emptyList()
         }
-        
+
         try {
             val jsonArray = org.json.JSONArray(sessionsJson)
             val blockedApps = mutableMapOf<String, Int>()
-            
+
             for (i in 0 until jsonArray.length()) {
                 val session = jsonArray.optJSONObject(i)
                 session?.optJSONArray("blockedApps")?.let { apps ->
@@ -499,7 +535,7 @@ object StatisticsManager {
                     }
                 }
             }
-            
+
             return blockedApps.toList()
                 .sortedByDescending { it.second }
                 .take(5)
@@ -509,11 +545,11 @@ object StatisticsManager {
             return emptyList()
         }
     }
-    
+
     private fun findBestDay(dailyStats: List<DailyStats>): LocalDate? {
         return dailyStats.maxByOrNull { it.totalFocusTime }?.date
     }
-    
+
     private fun loadAchievements(): List<String> {
         val achievementsString = prefs.getString("achievements", "")
         return if (achievementsString.isNullOrEmpty()) {
@@ -524,45 +560,50 @@ object StatisticsManager {
     }
 
     // After achievements are updated, sync as well
+    @Synchronized
     private fun saveAchievements(achievements: List<String>) {
-        prefs.edit().putString("achievements", achievements.joinToString(",")).apply()
+        if (!ManagerPersistence.writable()) return
+        ManagerPersistence.attribute(context, prefs, prefs.edit())
+            .putString("achievements", achievements.joinToString(",")).apply()
         // Trigger background sync but also enqueue a WorkManager retry in case we are offline
         MindVaultApplication.instance.applicationScope.launch {
-            val success = AuthManager.syncUserDataToCloud()
-            if (!success) {
+            val outcome = AuthManager.backupToCloud()
+            if (outcome == CloudBackupResult.RETRY) {
                 try {
-                    val wm = androidx.work.WorkManager.getInstance(MindVaultApplication.instance)
-                    val req = androidx.work.OneTimeWorkRequestBuilder<com.example.mindvault.data.BackupSyncWorker>()
-                        .setExpedited(androidx.work.OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-                        .build()
-                    wm.enqueue(req)
-                } catch (_: Exception) { }
+                    AuthManager.enqueueBackupRetry()
+                } catch (_: Exception) {
+                }
             }
         }
     }
-    
+
     private fun generateSessionId(): String {
         return "session_${System.currentTimeMillis()}"
     }
-    
+
     private fun saveCurrentSession(session: FocusSessionRecord) {
         try {
             val obj = org.json.JSONObject()
             obj.put("id", session.id)
             obj.put("startTime", session.startTime.toString())
+            // Event checkpoint only; do not infer activity beyond the last persisted observation.
+            obj.put("lastObservedTime", LocalDateTime.now().toString())
             obj.put("type", session.type)
             obj.put("distractionCount", session.distractionCount)
             val blockedAppsArray = org.json.JSONArray()
             session.blockedApps.forEach { blockedAppsArray.put(it) }
             obj.put("blockedApps", blockedAppsArray)
-            prefs.edit().putString("current_session", obj.toString()).apply()
+            ManagerPersistence.attribute(context, prefs, prefs.edit())
+                .putString("current_session", obj.toString()).apply()
+            lastCheckpointElapsed = android.os.SystemClock.elapsedRealtime()
         } catch (e: Exception) {
             Log.e("StatisticsManager", "Failed to save current session", e)
         }
     }
-    
-    private fun saveSessionRecord(session: FocusSessionRecord) {
-        // Persist session info including blocked apps for analytics
+
+    private fun saveSessionRecord(session: FocusSessionRecord, editor: SharedPreferences.Editor) {
+        // Records, counts and untimestamped distractions are indexed by start date.
+        // getTopBlockedApps intentionally follows that convention, not each time slice.
         val dateKey = session.startTime.toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE)
         val prefsKey = "sessions_${dateKey}"
         val existing = prefs.getString(prefsKey, null)
@@ -577,37 +618,49 @@ object StatisticsManager {
             obj.put("type", session.type)
             obj.put("isCompleted", session.isCompleted)
             obj.put("distractionCount", session.distractionCount)
-            
+
             // Store blocked apps array
             val blockedAppsArray = org.json.JSONArray()
             session.blockedApps.forEach { app ->
                 blockedAppsArray.put(app)
             }
             obj.put("blockedApps", blockedAppsArray)
-            
+
             jsonArray.put(obj)
-            prefs.edit().putString(prefsKey, jsonArray.toString()).apply()
+            editor.putString(prefsKey, jsonArray.toString())
         }
         Log.d("StatisticsManager", "Saved session record with ${session.blockedApps.size} blocked apps: ${session.id}")
     }
-    
+
+    private fun finalizeSession(session: FocusSessionRecord, attributeNewActivity: Boolean = true) {
+        // Keep the ledger and removal of its recovery checkpoint in one atomic prefs
+        // update: a process restart sees either the old checkpoint or the final ledger.
+        val editor = prefs.edit()
+        if (attributeNewActivity) ManagerPersistence.attribute(context, prefs, editor)
+        saveSessionRecord(session, editor)
+        updateDailyStats(session, editor)
+        updateUserStats(session, editor)
+        editor.remove("current_session").apply()
+        if (session.isCompleted) updateStreaks(true)
+    }
+
     private fun clearCurrentSession() {
         prefs.edit().remove("current_session").apply()
     }
-    
+
     // Public methods for UI
     fun getTodayFocusTime(): Long {
         return _dailyStats.value?.totalFocusTime ?: 0L
     }
-    
+
     fun getWeeklyProgress(): Float {
         return _weeklyStats.value?.weeklyGoalProgress ?: 0f
     }
-    
+
     fun getCurrentLevel(): Int {
         return _userStats.value?.level ?: 1
     }
-    
+
     fun getProductivityScore(): Float {
         val daily = _dailyStats.value ?: return 0f
         val user = _userStats.value

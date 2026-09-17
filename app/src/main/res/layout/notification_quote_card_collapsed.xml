@@ -8,6 +8,7 @@
     <!-- Compact bitmap for collapsed notification view -->
     <ImageView
         android:id="@+id/ivCustomTextBitmapCollapsed"
+        android:contentDescription="@string/notification_quote_image_description"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:scaleType="fitStart"

@@ -3,6 +3,22 @@ package com.example.mindvault.services
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Intent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.os.SystemClock
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import com.example.mindvault.utils.DistractionBurstTracker
+import com.example.mindvault.utils.OverlayScheduleBoundary
 import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -19,6 +35,16 @@ import com.example.mindvault.ui.notifications.CustomNotificationBuilder
 class FocusAccessibilityService : AccessibilityService() {
 
     private val TAG = "FocusAccessibilityService"
+    private val distractionBursts = DistractionBurstTracker()
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var configurationJob: Job? = null
+    private var overlayBoundaryJob: Job? = null
+    private var clockReceiverRegistered = false
+    private val clockReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            reconcileOverlaySchedule()
+        }
+    }
 
     /**
      * Packages that can trigger uninstall flows we need to guard against.
@@ -36,7 +62,9 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED ||
-            event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) {
+            event?.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
+        ) {
+            reconcileOverlaySchedule()
             val packageName = event.packageName?.toString()
             if (packageName != null) {
 
@@ -86,7 +114,9 @@ class FocusAccessibilityService : AccessibilityService() {
         // SAFETY: Never disable during Focus Mode
         val focusActive = try {
             FocusManager.isInitialized() && FocusManager.isFocusModeActive()
-        } catch (_: Exception) { false }
+        } catch (_: Exception) {
+            false
+        }
         if (focusActive) return false
 
         // Check if this app is in the compatibility list
@@ -113,15 +143,18 @@ class FocusAccessibilityService : AccessibilityService() {
 
     /**
      * Determines if self-protection guards should be active.
-     * Guards activate ONLY when Focus Mode is currently running.
-     * Outside of focus sessions, users have full access to device settings.
+     * Guards activate when Focus Mode is currently running
+     * OR when Advanced Protection is enabled in settings.
+     * Outside of both, users have full access to device settings.
      */
     private fun shouldGuardSelf(): Boolean {
         val focusActive = try {
             FocusManager.isInitialized() && FocusManager.isFocusModeActive()
-        } catch (_: Exception) { false }
+        } catch (_: Exception) {
+            false
+        }
 
-        return focusActive
+        return focusActive || isAdvancedProtectionEnabled()
     }
 
     /**
@@ -133,9 +166,7 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun guardMindVaultAppInfo(event: AccessibilityEvent?): Boolean {
         try {
-            val source = event?.source ?: return false
-            val allText = collectAllText(source)
-            source.recycle()
+            val allText = collectEventText(event) ?: return false
 
             val hasMindVault = allText.contains("mindvault") ||
                     allText.contains("com.example.mindvault")
@@ -169,9 +200,7 @@ class FocusAccessibilityService : AccessibilityService() {
     private fun guardDeviceAdminSettings(event: AccessibilityEvent?): Boolean {
         if (!isDeviceAdminCurrentlyActive()) return false
         try {
-            val source = event?.source ?: return false
-            val allText = collectAllText(source)
-            source.recycle()
+            val allText = collectEventText(event) ?: return false
 
             val hasMindVault = allText.contains("mindvault") ||
                     allText.contains("com.example.mindvault")
@@ -200,9 +229,7 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun guardAccessibilitySettings(event: AccessibilityEvent?): Boolean {
         try {
-            val source = event?.source ?: return false
-            val allText = collectAllText(source)
-            source.recycle()
+            val allText = collectEventText(event) ?: return false
 
             val hasMindVault = allText.contains("mindvault") ||
                     allText.contains("focus accessibility") ||
@@ -233,9 +260,7 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun guardUninstallDialog(event: AccessibilityEvent?): Boolean {
         try {
-            val source = event?.source ?: return false
-            val allText = collectAllText(source)
-            source.recycle()
+            val allText = collectEventText(event) ?: return false
 
             val hasMindVault = allText.contains("mindvault") ||
                     allText.contains("com.example.mindvault")
@@ -264,9 +289,7 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun guardPlayStore(event: AccessibilityEvent?): Boolean {
         try {
-            val source = event?.source ?: return false
-            val allText = collectAllText(source)
-            source.recycle()
+            val allText = collectEventText(event) ?: return false
 
             val hasMindVault = allText.contains("mindvault") ||
                     allText.contains("com.example.mindvault")
@@ -285,6 +308,15 @@ class FocusAccessibilityService : AccessibilityService() {
 
     // ========================== TEXT COLLECTION ==========================
 
+    private fun collectEventText(event: AccessibilityEvent?): String? {
+        val source = event?.source ?: return null
+        return try {
+            collectAllText(source)
+        } finally {
+            source.recycle()
+        }
+    }
+
     /**
      * Collects ALL visible text from the entire view hierarchy into a single
      * lowercase string. This enables two-pass detection where keywords like
@@ -301,8 +333,11 @@ class FocusAccessibilityService : AccessibilityService() {
 
         for (i in 0 until node.childCount) {
             val child = node.getChild(i) ?: continue
-            sb.append(collectAllText(child, depth + 1))
-            child.recycle()
+            try {
+                sb.append(collectAllText(child, depth + 1))
+            } finally {
+                child.recycle()
+            }
         }
         return sb.toString().lowercase()
     }
@@ -322,10 +357,22 @@ class FocusAccessibilityService : AccessibilityService() {
             val isWhitelisted = packageName == "com.example.mindvault" || isLauncher(packageName)
             if (!isWhitelisted) {
                 Log.i(TAG, "Blocking app: $packageName")
-                
-                // Record distraction in statistics
-                StatisticsManager.recordDistraction(packageName)
-                
+
+                // Coalesce accounting only; never suppress the blocking actions below.
+                if (distractionBursts.shouldRecord(
+                        StatisticsManager.currentSession.value?.id,
+                        packageName,
+                        SystemClock.elapsedRealtime()
+                    )
+                ) {
+                    try {
+                        StatisticsManager.recordDistraction(packageName)
+                    } catch (e: Exception) {
+                        distractionBursts.clear()
+                        Log.e(TAG, "Failed to record distraction", e)
+                    }
+                }
+
                 // Detect if the blocked app is running in a floating/freeform/split window
                 val windowBounds = getWindowBoundsForPackage(packageName)
                 val screenWidth = resources.displayMetrics.widthPixels
@@ -336,19 +383,54 @@ class FocusAccessibilityService : AccessibilityService() {
                 if (isFloating && windowBounds != null) {
                     Log.i(TAG, "Floating window detected for $packageName, showing overlay")
                     val label = AppManager.getAppName(this, packageName)
-                    OverlayBlocker.show(this, windowBounds, label)
+                    OverlayBlocker.show(this, packageName, windowBounds, label)
+                    reconcileOverlaySchedule()
                     // Force-close the floating window
                     try {
                         performGlobalAction(GLOBAL_ACTION_BACK)
-                    } catch (_: Exception) { }
+                    } catch (_: Exception) {
+                    }
                 } else {
-                    OverlayBlocker.hide(this)
+                    hideOverlay()
                     showBlockedScreen(packageName)
                 }
             }
         } else {
             // App is not blocked (or focus mode inactive) — clean up any lingering overlay
+            hideOverlay()
+            if (!isCurrentlyInFocusSession) distractionBursts.clear()
+        }
+    }
+
+    private fun hideOverlay() {
+        OverlayBlocker.hide(this)
+        overlayBoundaryJob?.cancel()
+        overlayBoundaryJob = null
+    }
+
+    private fun reconcileOverlaySchedule() {
+        overlayBoundaryJob?.cancel()
+        overlayBoundaryJob = null
+        val target = OverlayBlocker.targetPackage(this) ?: return
+        if (!FocusManager.isInitialized()) return
+        // Capture before the policy check: crossing an end during this callback must
+        // schedule an immediate recheck, not the same boundary tomorrow.
+        val observedAt = ZonedDateTime.now()
+        val observedElapsed = SystemClock.elapsedRealtime()
+        val config = FocusManager.getCurrentConfiguration()
+        // Deliberately retain accessibility's selected-app policy in BOTH slot types.
+        // activeSlotFlow is permission-gated and is not an expiry signal for this overlay.
+        if (!FocusManager.isFocusModeActive() || target !in config.selectedApps) {
             OverlayBlocker.hide(this)
+        }
+        if (OverlayBlocker.targetPackage(this) == null) return
+        val waitMillis = OverlayScheduleBoundary.delayMillis(
+            observedAt,
+            config.timeSlots.flatMap { listOf(it.startTime, it.endTime) }
+        ) ?: return
+        overlayBoundaryJob = serviceScope.launch {
+            delay((waitMillis - (SystemClock.elapsedRealtime() - observedElapsed)).coerceAtLeast(1L))
+            reconcileOverlaySchedule()
         }
     }
 
@@ -378,16 +460,18 @@ class FocusAccessibilityService : AccessibilityService() {
         try {
             val windowList = windows ?: return null
             for (window in windowList) {
-                val root = window.root
-                if (root != null && root.packageName?.toString() == packageName) {
-                    val rect = Rect()
-                    window.getBoundsInScreen(rect)
-                    root.recycle()
-                    if (rect.width() > 0 && rect.height() > 0) {
-                        return rect
+                val root = window.root ?: continue
+                try {
+                    if (root.packageName?.toString() == packageName) {
+                        val rect = Rect()
+                        window.getBoundsInScreen(rect)
+                        if (rect.width() > 0 && rect.height() > 0) {
+                            return rect
+                        }
                     }
+                } finally {
+                    root.recycle()
                 }
-                root?.recycle()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error scanning windows for $packageName", e)
@@ -402,8 +486,12 @@ class FocusAccessibilityService : AccessibilityService() {
      */
     private fun isDeviceAdminCurrentlyActive(): Boolean {
         return try {
-            val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
-            val adminComponent = android.content.ComponentName(this, com.example.mindvault.receivers.MindVaultDeviceAdminReceiver::class.java)
+            val dpm =
+                getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as android.app.admin.DevicePolicyManager
+            val adminComponent = android.content.ComponentName(
+                this,
+                com.example.mindvault.receivers.MindVaultDeviceAdminReceiver::class.java
+            )
             dpm.isAdminActive(adminComponent)
         } catch (_: Exception) {
             false
@@ -430,18 +518,44 @@ class FocusAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
-        val info = AccessibilityServiceInfo()
+        val info = serviceInfo
         info.eventTypes = AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED or AccessibilityEvent.TYPE_WINDOWS_CHANGED
         info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
-        info.flags = AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
-            AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        info.flags = info.flags or AccessibilityServiceInfo.FLAG_INCLUDE_NOT_IMPORTANT_VIEWS or
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
         serviceInfo = info
+        configurationJob?.cancel()
+        configurationJob = serviceScope.launch {
+            FocusManager.configurationFlow.collect { reconcileOverlaySchedule() }
+        }
+        if (!clockReceiverRegistered) {
+            ContextCompat.registerReceiver(
+                this,
+                clockReceiver,
+                IntentFilter().apply {
+                    addAction(Intent.ACTION_TIME_CHANGED)
+                    addAction(Intent.ACTION_TIMEZONE_CHANGED)
+                    addAction(Intent.ACTION_SCREEN_ON)
+                },
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
+            clockReceiverRegistered = true
+        }
         Log.i(TAG, "Accessibility Service connected and configured.")
         isServiceRunning = true
     }
 
     override fun onDestroy() {
+        serviceScope.cancel()
+        distractionBursts.clear()
+        if (clockReceiverRegistered) {
+            unregisterReceiver(clockReceiver)
+            clockReceiverRegistered = false
+        }
         super.onDestroy()
+        // The singleton overlay holds a service-context view; leaking it keeps the
+        // dead service alive and the blocker on screen.
+        OverlayBlocker.hide(this)
         isServiceRunning = false
         Log.i(TAG, "Accessibility Service destroyed.")
     }

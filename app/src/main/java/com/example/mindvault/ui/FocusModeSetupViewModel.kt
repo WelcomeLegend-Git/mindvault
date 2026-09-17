@@ -31,7 +31,7 @@ class FocusModeSetupViewModel : ViewModel() {
                 val config = withContext(Dispatchers.IO) {
                     FocusDataStore.getConfiguration(context)
                 }
-                
+
                 // Load installed apps on IO thread with error handling
                 // Only load installed apps if the list is not already populated.
                 val installedApps = if (_uiState.value.installedApps.isEmpty()) {
@@ -46,11 +46,11 @@ class FocusModeSetupViewModel : ViewModel() {
                 } else {
                     _uiState.value.installedApps
                 }
-                
+
                 val isFocusModeActive = withContext(Dispatchers.IO) {
                     FocusManager.isFocusModeActive()
                 }
-                
+
                 _uiState.update {
                     it.copy(
                         timeSlots = config.timeSlots,
@@ -65,36 +65,38 @@ class FocusModeSetupViewModel : ViewModel() {
         }
     }
 
-    fun saveConfiguration(context: Context) {
-        try {
-            val currentState = _uiState.value
-            val newConfig = FocusConfiguration(
-                timeSlots = currentState.timeSlots,
-                selectedApps = currentState.selectedApps
-            )
-            
-            Log.d("FocusModeSetupViewModel", "Saving configuration with ${newConfig.timeSlots.size} slots")
-            FocusDataStore.saveConfiguration(context, newConfig)
-            
-            // Update FocusManager - this is critical!
-            FocusManager.updateConfiguration(newConfig)
-            Log.d("FocusModeSetupViewModel", "Configuration saved and FocusManager updated")
-            
-            // Trigger cloud backup after saving
-            viewModelScope.launch {
-                AuthManager.syncUserDataToCloud()
+    /**
+     * Single save path: FocusManager owns storage + cloud sync, so the ViewModel must not
+     * write preferences or trigger a second backup. Disk work runs off the main thread and
+     * the result is reported to the caller.
+     */
+    fun saveConfiguration(onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val currentState = _uiState.value
+                    // Preserve the authoritative enabled state across configuration edits.
+                    val newConfig = FocusConfiguration(
+                        timeSlots = currentState.timeSlots,
+                        selectedApps = currentState.selectedApps,
+                        focusModeEnabled = FocusManager.getFocusModeEnabled()
+                    )
+                    Log.d("FocusModeSetupViewModel", "Saving configuration with ${newConfig.timeSlots.size} slots")
+                    FocusManager.updateConfiguration(newConfig)
+                    true
+                } catch (e: Exception) {
+                    Log.e("FocusModeSetupViewModel", "Error saving configuration", e)
+                    false
+                }
             }
-        } catch (e: Exception) {
-            Log.e("FocusModeSetupViewModel", "Error saving configuration", e)
+            onResult(ok)
         }
     }
 
     fun addTimeSlot(timeSlot: TimeSlot) {
+        // Draft edits stay local; the single backup happens on save.
         _uiState.update {
             it.copy(timeSlots = it.timeSlots + timeSlot)
-        }
-        viewModelScope.launch {
-            AuthManager.syncUserDataToCloud()
         }
     }
 
@@ -102,17 +104,11 @@ class FocusModeSetupViewModel : ViewModel() {
         _uiState.update {
             it.copy(timeSlots = it.timeSlots.filter { it.id != timeSlot.id })
         }
-        viewModelScope.launch {
-            AuthManager.syncUserDataToCloud()
-        }
     }
 
     fun onAppsSelected(selectedApps: List<String>) {
         _uiState.update {
             it.copy(selectedApps = selectedApps)
-        }
-        viewModelScope.launch {
-            AuthManager.syncUserDataToCloud()
         }
     }
 }

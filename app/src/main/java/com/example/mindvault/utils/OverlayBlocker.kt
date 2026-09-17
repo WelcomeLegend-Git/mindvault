@@ -4,81 +4,152 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.graphics.Rect
 import android.os.Build
+import android.os.Looper
+import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.annotation.MainThread
+import com.example.mindvault.R
 
-/**
- * Draws a small, touch‑blocking overlay on top of a floating/small window
- * using TYPE_APPLICATION_OVERLAY. This prevents the user from interacting
- * with a blocked app that is opened in a vendor side bar or freeform window.
- */
+/** Touch-blocking overlay for a blocked floating/freeform window. Owned by the main thread. */
 object OverlayBlocker {
-    @Volatile private var overlayView: View? = null
+    private const val TAG = "OverlayBlocker"
 
-    fun show(context: Context, targetBounds: Rect, appLabel: String) {
+    private class Overlay(
+        val owner: Context,
+        val windowManager: WindowManager,
+        val view: FrameLayout,
+        val message: TextView,
+        var packageName: String,
+        var label: String,
+        var bounds: Rect,
+        var wasAttached: Boolean = false
+    )
+
+    private var overlay: Overlay? = null
+
+    @MainThread
+    fun targetPackage(context: Context): String? {
+        checkMainThread()
+        return overlay?.takeIf { it.owner === context }?.packageName
+    }
+
+    @MainThread
+    fun show(context: Context, packageName: String, targetBounds: Rect, appLabel: String) {
+        checkMainThread()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-
-        // If already showing, update position/size
-        val existing = overlayView
-        if (existing != null) {
-            updateLayout(wm, existing, targetBounds)
+        if (targetBounds.isEmpty) return
+        // A declaration in the manifest does not guarantee the grant is still current.
+        if (!Settings.canDrawOverlays(context)) {
+            Log.w(TAG, "Overlay permission not granted; cannot block floating window")
             return
         }
 
-        val container = FrameLayout(context).apply {
-            setBackgroundColor(0xE61E3A8AFF.toInt()) // semi‑opaque blue like AppBlockedActivity
-            isClickable = true  // consume touches
-            isFocusable = true
+        var existing = overlay
+        if (existing != null && existing.owner !== context) {
+            remove(existing)
+            if (overlay != null) return // Do not lose ownership of a window whose removal failed.
+            existing = null
+        }
+        if (existing != null && existing.wasAttached && !existing.view.isAttachedToWindow) {
+            remove(existing)
+            if (overlay != null) return
+            existing = null
+        }
+        if (existing != null) {
+            if (existing.packageName != packageName || existing.label != appLabel) {
+                existing.message.text = context.getString(R.string.overlay_blocker_message, appLabel)
+                existing.packageName = packageName
+                existing.label = appLabel
+            }
+            if (existing.bounds != targetBounds) updateLayout(existing, targetBounds)
+            return
         }
 
+        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val container = FrameLayout(context).apply {
+            setBackgroundColor(0xE61E3A8AFF.toInt())
+            isClickable = true
+            isFocusable = true
+        }
         val message = TextView(context).apply {
-            text = "App Blocked\n$appLabel"
+            text = context.getString(R.string.overlay_blocker_message, appLabel)
             setTextColor(0xFFFFFFFF.toInt())
             textSize = 16f
             gravity = Gravity.CENTER
             setPadding(24, 24, 24, 24)
         }
-        container.addView(message, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
-        ))
+        container.addView(
+            message, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT
+            )
+        )
+        val current = Overlay(context, wm, container, message, packageName, appLabel, Rect(targetBounds))
+        container.addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+            override fun onViewAttachedToWindow(view: View) {
+                current.wasAttached = true
+            }
 
-        val lp = WindowManager.LayoutParams(
-            targetBounds.width(),
-            targetBounds.height(),
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // not focusable so back goes to host, but we still consume touches
-            WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
-            gravity = Gravity.TOP or Gravity.START
-            x = targetBounds.left
-            y = targetBounds.top
+            override fun onViewDetachedFromWindow(view: View) = Unit
+        })
+        try {
+            wm.addView(container, layoutParams(targetBounds))
+            overlay = current
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show blocking overlay", e)
         }
-
-        wm.addView(container, lp)
-        overlayView = container
     }
 
+    @MainThread
     fun hide(context: Context) {
-        val view = overlayView ?: return
-        val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        try { wm.removeView(view) } catch (_: Exception) {}
-        overlayView = null
+        checkMainThread()
+        val current = overlay ?: return
+        // A late teardown from an old service must not remove its replacement's overlay.
+        if (current.owner === context) remove(current)
     }
 
-    private fun updateLayout(wm: WindowManager, view: View, bounds: Rect) {
-        val lp = view.layoutParams as WindowManager.LayoutParams
-        lp.width = bounds.width()
-        lp.height = bounds.height()
-        lp.x = bounds.left
-        lp.y = bounds.top
-        wm.updateViewLayout(view, lp)
+    private fun remove(current: Overlay) {
+        try {
+            current.windowManager.removeViewImmediate(current.view)
+            if (overlay === current) overlay = null
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Overlay was already detached", e)
+            if (!current.view.isAttachedToWindow && overlay === current) overlay = null
+        } catch (e: Exception) {
+            // Retain the handle so a later cleanup can retry rather than orphaning a window.
+            Log.e(TAG, "Failed to remove blocking overlay", e)
+        }
+    }
+
+    private fun updateLayout(current: Overlay, bounds: Rect) {
+        try {
+            current.windowManager.updateViewLayout(current.view, layoutParams(bounds))
+            current.bounds = Rect(bounds)
+        } catch (e: Exception) {
+            // Keep the last successful bounds, so the next show retries this update.
+            Log.e(TAG, "Failed to update overlay bounds", e)
+        }
+    }
+
+    private fun layoutParams(bounds: Rect) = WindowManager.LayoutParams(
+        bounds.width(),
+        bounds.height(),
+        WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+        // Back still goes to the host app; touches are consumed by the overlay.
+        WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+        PixelFormat.TRANSLUCENT
+    ).apply {
+        gravity = Gravity.TOP or Gravity.START
+        x = bounds.left
+        y = bounds.top
+    }
+
+    private fun checkMainThread() {
+        check(Looper.myLooper() == Looper.getMainLooper()) { "OverlayBlocker requires the main thread" }
     }
 }
-
-
