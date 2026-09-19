@@ -565,16 +565,8 @@ object StatisticsManager {
         if (!ManagerPersistence.writable()) return
         ManagerPersistence.attribute(context, prefs, prefs.edit())
             .putString("achievements", achievements.joinToString(",")).apply()
-        // Trigger background sync but also enqueue a WorkManager retry in case we are offline
-        MindVaultApplication.instance.applicationScope.launch {
-            val outcome = AuthManager.backupToCloud()
-            if (outcome == CloudBackupResult.RETRY) {
-                try {
-                    AuthManager.enqueueBackupRetry()
-                } catch (_: Exception) {
-                }
-            }
-        }
+        // Seamless background auto-backup to Firestore
+        AuthManager.autoBackupOnChange()
     }
 
     private fun generateSessionId(): String {
@@ -642,6 +634,8 @@ object StatisticsManager {
         updateUserStats(session, editor)
         editor.remove("current_session").apply()
         if (session.isCompleted) updateStreaks(true)
+        // Seamless background auto-backup: sync stats and streaks immediately on session completion
+        AuthManager.autoBackupOnChange()
     }
 
     private fun clearCurrentSession() {

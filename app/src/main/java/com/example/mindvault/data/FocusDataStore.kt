@@ -33,6 +33,8 @@ object FocusDataStore {
             .putString(CONFIG_KEY, json)
             .putBoolean(FOCUS_MODE_ENABLED_KEY, config.focusModeEnabled)
             .apply()
+        // Seamless background auto-backup: sync focus configurations and schedules immediately
+        AuthManager.autoBackupOnChange()
     }
 
     fun getConfiguration(context: Context): FocusConfiguration {

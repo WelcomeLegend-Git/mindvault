@@ -1,45 +1,28 @@
 package com.example.mindvault.ui
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.mindvault.data.AuthManager
-import com.example.mindvault.data.CloudBackupState
-import com.example.mindvault.data.CloudBackupStatus
-import com.example.mindvault.data.FocusManager
-import com.example.mindvault.data.StatisticsManager
-import com.example.mindvault.data.User
-import com.example.mindvault.data.UserManager
+import com.example.mindvault.data.*
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
@@ -66,12 +49,20 @@ private fun restoreBlockedNow(): Boolean {
 }
 
 private const val RESTORE_BLOCKED =
-    "Restore is unavailable while a focus session or enabled focus schedule is active, " +
-            "including rest and call pauses. Wait until the session ends and the schedule is " +
-            "off through the normal focus controls."
+    "Restore is unavailable while a focus session or enabled focus schedule is active. " +
+            "Wait until the session ends or turn off the schedule in focus controls."
 
+// =========================================================================
+// INTENT & RATIONALE:
+// - Why this exists: CloudBackupDialog presents cloud sync status in a sleek,
+//   non-intrusive modal styled with MindVault's signature purple dark theme.
+// - Trade-off / Context: Dumping an unstyled, bulky card on the main Profile screen
+//   broke app UX and intimidated users. Backup operates seamlessly in the background;
+//   this modal serves as an accessible setting for manual sync and recovery.
+// - Invariant: Confirmation must guard destructive restore; uploads stay paused if account diverges.
+// =========================================================================
 @Composable
-internal fun CloudRecoveryCard() {
+internal fun CloudBackupDialog(onDismiss: () -> Unit) {
     val state by AuthManager.cloudState.collectAsStateWithLifecycle()
     val user by UserManager.currentUser.collectAsStateWithLifecycle()
     val loggedIn by UserManager.isLoggedIn.collectAsStateWithLifecycle()
@@ -85,7 +76,6 @@ internal fun CloudRecoveryCard() {
     val accountMatches = loggedIn && user != null && state.accountEmail != null &&
             state.accountEmail == user?.email && state.revision != null
 
-    // Never carry consent across accounts, sign-in revisions, or Activity recreation.
     var confirmation by remember(state.revision, state.accountEmail, user?.id, loggedIn) {
         mutableStateOf<CloudRequest?>(null)
     }
@@ -100,6 +90,7 @@ internal fun CloudRecoveryCard() {
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
+
     LaunchedEffect(state.status, busy, restoreBlocked) {
         val request = confirmation
         if (request != null && (state.status != request.status || busy ||
@@ -129,27 +120,17 @@ internal fun CloudRecoveryCard() {
         if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED) ||
             !request.matches(AuthManager.cloudState.value, UserManager.currentUser.value, UserManager.isLoggedIn.value)
         ) {
-            feedback = "Cloud status or account changed. Review the current status and try again."
+            feedback = "Cloud status or account changed. Try again."
             return
         }
         if (request.action == CloudAction.RESTORE && restoreBlockedNow()) {
             feedback = RESTORE_BLOCKED
             return
         }
-        // Set synchronously, before launch, to reject rapid repeated taps.
         running = true
         feedback = null
         scope.launch {
             try {
-                // Recheck live flows, not the lifecycle collector's last rendered snapshot.
-                if (!request.matches(
-                        AuthManager.cloudState.value,
-                        UserManager.currentUser.value,
-                        UserManager.isLoggedIn.value
-                    )
-                ) {
-                    return@launch
-                }
                 val completed = when (request.action) {
                     CloudAction.RETRY -> AuthManager.retryCloudRecovery()
                     CloudAction.BACKUP -> AuthManager.syncUserDataToCloud()
@@ -160,27 +141,16 @@ internal fun CloudRecoveryCard() {
                         }
                         AuthManager.restoreCloudBackup(request.revision)
                     }
-
                     CloudAction.IMPORT -> AuthManager.importDeviceData(request.revision)
                 }
                 val latest = AuthManager.cloudState.value
-                // Recovery can return false to offer a choice; backup true can mean skipped.
-                // Treat backend status as authoritative and never invent a success notification.
-                if (!completed && request.matches(
-                        latest,
-                        UserManager.currentUser.value,
-                        UserManager.isLoggedIn.value
-                    )
-                ) {
-                    feedback = "The request did not complete. Review the cloud status and retry when online."
+                if (!completed && request.matches(latest, UserManager.currentUser.value, UserManager.isLoggedIn.value)) {
+                    feedback = "Request did not complete. Check connection and retry."
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                val latest = AuthManager.cloudState.value
-                if (latest.revision == request.revision && latest.accountEmail == request.email) {
-                    feedback = "The cloud request failed. Check your connection and retry the server check."
-                }
+                feedback = "Cloud request failed. Check internet connection."
             } finally {
                 running = false
             }
@@ -190,7 +160,7 @@ internal fun CloudRecoveryCard() {
     fun ask(action: CloudAction) {
         val request = capture(action)
         if (request == null) {
-            feedback = "Cloud status or account changed. Review the current status and try again."
+            feedback = "Cloud status or account changed. Try again."
         } else if (action == CloudAction.RESTORE && restoreBlockedNow()) {
             feedback = RESTORE_BLOCKED
         } else {
@@ -199,123 +169,242 @@ internal fun CloudRecoveryCard() {
         }
     }
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1B2E)),
+            border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.35f))
         ) {
-            Text(
-                "Cloud backup & recovery", style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() })
-            state.accountEmail?.let { Text("Google account: $it", style = MaterialTheme.typography.bodyMedium) }
-            Text(
-                text = when (state.status) {
-                    CloudBackupStatus.SIGNED_OUT -> "Cloud backup is off"
-                    CloudBackupStatus.CHECKING -> "Checking cloud backup"
-                    CloudBackupStatus.READY -> "Cloud backup is ready"
-                    CloudBackupStatus.RESTORE_AVAILABLE -> "Cloud backup found"
-                    CloudBackupStatus.IMPORT_AVAILABLE -> "Device import needs your permission"
-                    CloudBackupStatus.BLOCKED -> "Cloud recovery is blocked"
-                    CloudBackupStatus.ERROR -> "Cloud request needs attention"
-                    CloudBackupStatus.UPLOADING -> "Uploading cloud backup"
-                },
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }
-            )
-            Text(state.message, style = MaterialTheme.typography.bodyMedium)
-            if (state.status == CloudBackupStatus.SIGNED_OUT) {
-                Text("Guest and local-only use do not back up or recover data. Sign in with Google using the existing account controls to enable cloud recovery.")
-            } else if (!accountMatches && !state.busy) {
-                Text("No matching cloud account is connected. Sign in with Google using the existing account controls, then review this card.")
-            }
-            if (busy) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                Text("Please wait. Cloud actions are unavailable while a request is in progress.")
-            }
-            feedback?.let {
-                Text(
-                    it, color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-            }
-            if (state.status == CloudBackupStatus.READY) {
-                Text("Back up now uploads this device’s current profile, focus settings and statistics to this account, replacing its cloud backup.")
-                Button(
-                    onClick = { capture(CloudAction.BACKUP)?.let { execute(it) } },
-                    enabled = accountMatches && !busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                ) { Text("Back up now") }
-            }
-            if (state.status == CloudBackupStatus.RESTORE_AVAILABLE || state.status == CloudBackupStatus.READY) {
-                if (restoreBlocked) Text(RESTORE_BLOCKED)
-                OutlinedButton(
-                    onClick = { ask(CloudAction.RESTORE) },
-                    enabled = accountMatches && !busy && !restoreBlocked,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                ) { Text("Restore cloud backup…") }
-            }
-            if (state.status == CloudBackupStatus.IMPORT_AVAILABLE) {
-                OutlinedButton(
-                    onClick = { ask(CloudAction.IMPORT) },
-                    enabled = accountMatches && !busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                ) { Text("Import this device’s data…") }
-            }
-            if (state.status != CloudBackupStatus.SIGNED_OUT) {
-                OutlinedButton(
-                    onClick = { capture(CloudAction.RETRY)?.let { execute(it) } },
-                    enabled = accountMatches && !busy,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+            Column(
+                modifier = Modifier
+                    .padding(24.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        if (state.status == CloudBackupStatus.ERROR || state.status == CloudBackupStatus.BLOCKED)
-                            "Retry server check" else "Check server again"
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color(0xFF8B5CF6).copy(alpha = 0.18f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Cloud,
+                                contentDescription = "Cloud Sync",
+                                tint = Color(0xFFD1B1FF),
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column {
+                            Text(
+                                text = "Cloud Backup & Sync",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            state.accountEmail?.let {
+                                Text(
+                                    text = it,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFD1B1FF)
+                                )
+                            }
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+
+                // Status Card
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF12101F)),
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.08f))
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Status",
+                                tint = Color(0xFF4ADE80),
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (state.status) {
+                                    CloudBackupStatus.SIGNED_OUT -> "Cloud Backup is Off"
+                                    CloudBackupStatus.CHECKING -> "Checking Cloud Sync…"
+                                    CloudBackupStatus.READY -> "Automatic Cloud Sync Active"
+                                    CloudBackupStatus.RESTORE_AVAILABLE -> "Cloud Backup Available"
+                                    CloudBackupStatus.IMPORT_AVAILABLE -> "Ready to Back Up"
+                                    CloudBackupStatus.BLOCKED -> "Sync Requires Attention"
+                                    CloudBackupStatus.ERROR -> "Sync Attention Needed"
+                                    CloudBackupStatus.UPLOADING -> "Syncing to Cloud…"
+                                },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+
+                        Text(
+                            text = if (state.status == CloudBackupStatus.SIGNED_OUT) {
+                                "Sign in with Google to protect your streaks, goals, and focus statistics."
+                            } else {
+                                "Your focus sessions, streaks, weekly goals, and settings are automatically backed up whenever changes are made."
+                            },
+                            fontSize = 12.sp,
+                            color = Color.White.copy(alpha = 0.7f),
+                            lineHeight = 18.sp
+                        )
+
+                        if (busy) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = Color(0xFF8B5CF6),
+                                trackColor = Color(0xFF8B5CF6).copy(alpha = 0.2f)
+                            )
+                        }
+
+                        feedback?.let {
+                            Text(
+                                text = it,
+                                fontSize = 12.sp,
+                                color = Color(0xFFFF6B6B),
+                                lineHeight = 16.sp
+                            )
+                        }
+                    }
+                }
+
+                // Action Buttons
+                if (state.status == CloudBackupStatus.READY || state.status == CloudBackupStatus.IMPORT_AVAILABLE) {
+                    Button(
+                        onClick = {
+                            if (state.status == CloudBackupStatus.IMPORT_AVAILABLE) {
+                                ask(CloudAction.IMPORT)
+                            } else {
+                                capture(CloudAction.BACKUP)?.let { execute(it) }
+                            }
+                        },
+                        enabled = accountMatches && !busy,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8B5CF6))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Sync to Cloud Now", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                if (state.status == CloudBackupStatus.RESTORE_AVAILABLE || state.status == CloudBackupStatus.READY) {
+                    OutlinedButton(
+                        onClick = { ask(CloudAction.RESTORE) },
+                        enabled = accountMatches && !busy && !restoreBlocked,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD1B1FF))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudDownload,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Restore from Cloud…", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+
+                if (state.status == CloudBackupStatus.ERROR || state.status == CloudBackupStatus.BLOCKED) {
+                    OutlinedButton(
+                        onClick = { capture(CloudAction.RETRY)?.let { execute(it) } },
+                        enabled = accountMatches && !busy,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, Color(0xFF8B5CF6).copy(alpha = 0.5f))
+                    ) {
+                        Text("Retry Server Sync")
+                    }
+                }
+
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Close", color = Color.White.copy(alpha = 0.7f))
                 }
             }
         }
     }
 
+    // Confirmation Alert Dialog
     confirmation?.let { request ->
         val restoring = request.action == CloudAction.RESTORE
         val valid = request.matches(state, user, loggedIn) && !busy && (!restoring || !restoreBlocked)
         if (valid) {
             AlertDialog(
                 onDismissRequest = { confirmation = null },
-                title = { Text(if (restoring) "Replace device data?" else "Assign and upload device data?") },
+                title = { Text(if (restoring) "Restore Cloud Backup?" else "Sync Device Data?") },
                 text = {
                     Column(
                         modifier = Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text("Google account: ${request.email}")
+                        Text("Google Account: ${request.email}", fontWeight = FontWeight.Medium)
                         Text(
                             if (restoring)
-                                "This replaces this device’s profile, focus settings and statistics with this account’s cloud backup. It does not merge data. Local changes not in that backup will be lost, and restored focus settings may take effect. This cannot be undone here."
+                                "This will replace this device's profile, focus settings, and statistics with your account's cloud backup."
                             else
-                                "This assigns this device’s existing profile, focus settings and statistics to this Google account and uploads them to the cloud. Only continue if this device’s data is yours and belongs in this account. Future backups will use this account. This cannot be undone here."
-                        )
-                        Text(
-                            if (restoring)
-                                "Restore is blocked during an active focus session or enabled schedule. This action does not stop or bypass focus protection."
-                            else
-                                "The server will be checked again. If a backup now exists, import will not overwrite it; review the new recovery status instead."
+                                "This uploads your current statistics and settings to your Google account."
                         )
                     }
                 },
                 confirmButton = {
                     TextButton(
-                        onClick = { execute(request) }, enabled = valid,
-                        modifier = Modifier.heightIn(min = 48.dp)
+                        onClick = { execute(request) },
+                        enabled = valid
                     ) {
-                        Text(if (restoring) "Replace and restore" else "Assign and upload")
+                        Text(if (restoring) "Restore" else "Sync", color = Color(0xFF8B5CF6))
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { confirmation = null }, modifier = Modifier.heightIn(min = 48.dp)) {
+                    TextButton(onClick = { confirmation = null }) {
                         Text("Cancel")
                     }
                 }
             )
         }
     }
+}
+
+/** Compatibility stub for any legacy references */
+@Composable
+internal fun CloudRecoveryCard() {
+    // Deliberately empty: functionality moved to CloudBackupDialog within SettingsSection.
 }

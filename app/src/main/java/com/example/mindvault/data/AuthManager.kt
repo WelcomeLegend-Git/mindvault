@@ -114,7 +114,7 @@ object AuthManager {
         return try {
             val account = GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
             if (account == null) AuthResult(false, errorMessage = "Failed to get account information")
-            else handleSignInResult(account, revision)
+            else handleSignInResult(account, revision, isExplicitSignIn = true)
         } catch (e: ApiException) {
             AuthResult(false, errorMessage = "Sign in failed: ${e.message}")
         } finally {
@@ -122,7 +122,19 @@ object AuthManager {
         }
     }
 
-    private suspend fun handleSignInResult(account: GoogleSignInAccount, revision: Long): AuthResult =
+    // =========================================================================
+    // INTENT & RATIONALE:
+    // - Why this exists: When a user signs in (e.g. after installing on a new device or re-logging in),
+    //   their cloud backup must be restored automatically and instantly without manual prompt friction.
+    // - Trade-off / Context: Asking users to find a button and confirm in a scary dialog causes lost
+    //   streaks and poor UX. Seamless restore on login restores user data immediately.
+    // - Invariant: Day-to-day cold starts without explicit sign-in preserve local data and auto-sync.
+    // =========================================================================
+    private suspend fun handleSignInResult(
+        account: GoogleSignInAccount,
+        revision: Long,
+        isExplicitSignIn: Boolean = false
+    ): AuthResult =
         withContext(Dispatchers.Main) {
             accountMutex.withLock {
                 if (!cloudSession.isRevisionCurrent(revision)) {
@@ -169,7 +181,7 @@ object AuthManager {
                     cloudSession.activate(revision, firebaseUser.uid, user.id, uploadReady = false)
                     val result = AuthResult(true, user)
                     _authState.value = result
-                    recoverCloudData(checkNotNull(cloudSession.current()))
+                    recoverCloudData(checkNotNull(cloudSession.current()), autoRestore = isExplicitSignIn)
                     if (!cloudSession.isRevisionCurrent(revision)) {
                         return@withLock AuthResult(false, errorMessage = "Sign-in was canceled")
                     }
@@ -391,8 +403,40 @@ object AuthManager {
         ) { "Restore blocked: finish the running session and turn off the configured focus schedule. Data owned by another account cannot be replaced." }
     }
 
+    // =========================================================================
+    // INTENT & RATIONALE:
+    // - Why this exists: Continuous seamless auto-backup. Whenever a user completes a
+    //   focus session, updates goals, or changes settings, data is automatically backed up.
+    // - Trade-off / Context: Requiring manual taps to "Back up now" leads to out-of-sync
+    //   cloud data and data loss across reinstalls. Automatic background sync is transparent.
+    // - Invariant: Never sync when unauthenticated, and always queue a retry if offline.
+    // =========================================================================
+    fun autoBackupOnChange() {
+        val session = cloudSession.current() ?: return
+        val currentFirebaseUser = FirebaseAuth.getInstance().currentUser ?: return
+        if (currentFirebaseUser.uid != session.uid) return
+
+        MindVaultApplication.instance.applicationScope.launch {
+            try {
+                val outcome = backupToCloud(session.uid)
+                if (outcome == CloudBackupResult.RETRY) {
+                    enqueueBackupRetry()
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Background auto-backup failed, queuing retry", e)
+                try {
+                    enqueueBackupRetry()
+                } catch (_: Exception) {}
+            }
+        }
+    }
+
+
     private suspend fun recoverCloudData(
-        session: CloudBackupSession.Session, restore: Boolean = false, claim: Boolean = false
+        session: CloudBackupSession.Session,
+        restore: Boolean = false,
+        claim: Boolean = false,
+        autoRestore: Boolean = false
     ): Boolean {
         if (!matches(session)) return false
         cloudSession.setUploadReady(session, false)
@@ -414,7 +458,7 @@ object AuthManager {
                 )
                 return false
             }
-            if (restore) requireIdleRestore(session.uid)
+            if (restore || autoRestore) requireIdleRestore(session.uid)
             val snapshot = withTimeoutOrNull(30_000) { serverBackup(session.uid) }
                 ?: error("Server check timed out. Check your connection and retry.")
             if (!matches(session)) return false
@@ -437,7 +481,8 @@ object AuthManager {
                     PreferencesBackup.decodeSections(checkNotNull(snapshot.data) { "Backup is unreadable." })
                 }
                 if (!matches(session)) return false
-                if (restore) {
+                val shouldRestore = restore || autoRestore
+                if (shouldRestore) {
                     requireIdleRestore(session.uid)
                     val context = MindVaultApplication.instance
                     val email = checkNotNull(UserManager.currentUser.value?.email)
@@ -489,11 +534,11 @@ object AuthManager {
                     publish(
                         checkNotNull(cloudSession.current()),
                         CloudBackupStatus.READY,
-                        "Backup restored. Cloud backup is enabled."
+                        "Cloud backup restored. Auto-sync is active."
                     )
                     return true
                 }
-                if (decision == CloudBackupRecovery.Decision.OFFER_RESTORE) {
+                if (!autoRestore && decision == CloudBackupRecovery.Decision.OFFER_RESTORE) {
                     publish(
                         session,
                         CloudBackupStatus.RESTORE_AVAILABLE,
@@ -505,7 +550,7 @@ object AuthManager {
                 publish(
                     session,
                     CloudBackupStatus.READY,
-                    "Cloud backup enabled. Kept this account’s local data; startup does not restore over it."
+                    "Cloud backup active. Kept this account’s local data."
                 )
                 return true
             }

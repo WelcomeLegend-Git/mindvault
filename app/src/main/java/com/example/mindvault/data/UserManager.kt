@@ -292,6 +292,9 @@ object UserManager {
                 _currentUser.value = user
             }
 
+            // Seamless background auto-backup: sync profile, goals, and preferences immediately
+            AuthManager.autoBackupOnChange()
+
             true
         } catch (e: Exception) {
             Log.e("UserManager", "Failed to save user: ${e.message}")

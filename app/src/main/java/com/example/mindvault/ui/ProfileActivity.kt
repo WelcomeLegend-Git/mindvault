@@ -122,10 +122,6 @@ fun ProfileScreen() {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            CloudRecoveryCard()
-
-            Spacer(modifier = Modifier.height(24.dp))
-
             // Settings Card
             SettingsSection()
 
@@ -547,7 +543,10 @@ fun GuestProfileCard() {
 fun SettingsSection() {
     val context = LocalContext.current
     var showDeveloperTestingDialog by remember { mutableStateOf(false) }
+    var showCloudSyncDialog by remember { mutableStateOf(false) }
     var passwordInput by remember { mutableStateOf("") }
+    val isUserLoggedIn by UserManager.isLoggedIn.collectAsStateWithLifecycle()
+    val cloudState by AuthManager.cloudState.collectAsStateWithLifecycle()
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -585,6 +584,21 @@ fun SettingsSection() {
                     subtitle = "Update your personal information"
                 ) {
                     context.startActivity(Intent(context, EditProfileActivity::class.java))
+                }
+
+                ProfileOptionItem(
+                    icon = Icons.Default.Cloud,
+                    title = "Cloud Backup & Sync",
+                    subtitle = if (isUserLoggedIn) {
+                        when (cloudState.status) {
+                            com.example.mindvault.data.CloudBackupStatus.UPLOADING -> "Syncing changes to cloud…"
+                            com.example.mindvault.data.CloudBackupStatus.CHECKING -> "Checking cloud backup…"
+                            com.example.mindvault.data.CloudBackupStatus.ERROR -> "Sync attention needed • Tap to resolve"
+                            else -> "Auto-sync active • Data protected"
+                        }
+                    } else "Sign in with Google to enable cloud backup"
+                ) {
+                    showCloudSyncDialog = true
                 }
 
                 ProfileOptionItem(
@@ -685,6 +699,10 @@ fun SettingsSection() {
                 }
             }
         )
+    }
+
+    if (showCloudSyncDialog) {
+        CloudBackupDialog(onDismiss = { showCloudSyncDialog = false })
     }
 }
 

@@ -17,8 +17,8 @@ android {
         applicationId = "com.example.mindvault"
         minSdk = 28
         targetSdk = 36
-        versionCode = 12
-        versionName = "3.4.1"
+        versionCode = 13
+        versionName = "3.4.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -62,7 +62,7 @@ android {
             firebaseAppDistribution {
                 appId = "1:930728313401:android:bb0046d431682399cbc3e8"
                 artifactType = "APK"
-                releaseNotes = "v3.4.1: Seamless cloud backup authorization fix, legacy provenance auto-claim, and statistics preservation"
+                releaseNotes = "v3.4.2: Seamless cloud auto-sync on changes, instant login restore, and Profile settings UI redesign"
                 groups = "testers" // This is the group name in Firebase console
             }
         }
