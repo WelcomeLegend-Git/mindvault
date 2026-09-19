@@ -40,9 +40,15 @@ object AuthManager {
     private const val RESTORE_PENDING_KEY = "cloud_restore_incomplete"
     private const val PENDING_LOCAL_LOGOUT_KEY = "pending_local_logout"
 
-    // v1 is isolated from old app readers. Legacy documents are read-only migration sources.
-    private const val BACKUPS = "backups_v1"
-    private const val LEGACY_BACKUPS = "backups"
+    // =========================================================================
+    // INTENT & RATIONALE:
+    // - Why this exists: The Firestore security rules deployed in the Firebase Console
+    //   explicitly match `/backups/{userId}` with `request.auth.uid == userId`.
+    // - Trade-off / Context: The audit renamed this to `backups_v1` without server rules,
+    //   which caused `PERMISSION_DENIED: Missing or insufficient permissions.` on all client reads.
+    // - Invariant: Collection path MUST remain "backups" to stay authorized under Firebase rules.
+    // =========================================================================
+    private const val BACKUPS = "backups"
     private val cloudSession = CloudBackupSession()
     private val accountMutex = Mutex()
     private var pendingSignInRevision: Long? = null
@@ -371,10 +377,7 @@ object AuthManager {
         val db = FirebaseFirestore.getInstance()
         val current = db.collection(BACKUPS).document(uid).get(Source.SERVER).await()
         check(!current.metadata.hasPendingWrites()) { "A backup upload is still pending. Retry when online." }
-        if (current.exists()) return current
-        val legacy = db.collection(LEGACY_BACKUPS).document(uid).get(Source.SERVER).await()
-        check(!legacy.metadata.hasPendingWrites()) { "A legacy backup upload is still pending." }
-        return legacy
+        return current
     }
 
     private fun requireIdleRestore(uid: String) {
@@ -400,19 +403,16 @@ object AuthManager {
             }
             LocalRestore.checkWritable()
             val owner = localOwner()
-            if (owner != null && owner != session.uid) {
-                // If provenance is genuinely UNKNOWN (legacy migration edge case), allow the
-                // current user to claim their own data on retry rather than permanently blocking.
-                if (owner == DeviceDataOwnership.UNKNOWN) {
-                    LocalRestore.claim(MindVaultApplication.instance, session.uid)
-                    Log.i(TAG, "Auto-claimed UNKNOWN provenance data for uid ${session.uid}")
-                } else {
-                    publish(
-                        session, CloudBackupStatus.BLOCKED,
-                        "Device data belongs to another account. Nothing has been cleared, reassigned or uploaded."
-                    )
-                    return false
-                }
+            if (owner == null || owner == DeviceDataOwnership.UNKNOWN) {
+                // Auto-claim local data for the signed-in user if unowned or legacy data
+                LocalRestore.claim(MindVaultApplication.instance, session.uid)
+                Log.i(TAG, "Assigned device data ownership to logged-in user ${session.uid}")
+            } else if (owner != session.uid) {
+                publish(
+                    session, CloudBackupStatus.BLOCKED,
+                    "Device data belongs to another account. Nothing has been cleared, reassigned or uploaded."
+                )
+                return false
             }
             if (restore) requireIdleRestore(session.uid)
             val snapshot = withTimeoutOrNull(30_000) { serverBackup(session.uid) }
@@ -510,18 +510,29 @@ object AuthManager {
                 return true
             }
             if (!claim) {
+                val currentOwner = localOwner()
+                if (currentOwner == session.uid) {
+                    cloudSession.setUploadReady(session, true)
+                    publish(
+                        session,
+                        CloudBackupStatus.READY,
+                        "Cloud backup enabled. Ready to back up."
+                    )
+                    MindVaultApplication.instance.applicationScope.launch {
+                        backupToCloud(session.uid)
+                    }
+                    return true
+                }
                 publish(
                     session,
                     CloudBackupStatus.IMPORT_AVAILABLE,
-                    "The server has no backup in either location. Confirm import to assign this device’s data to this account and upload it."
+                    "No cloud backup found for this account. Confirm import to assign this device’s data to this account and upload it."
                 )
                 return false
             }
             check(!identityPrefs().getBoolean(RESTORE_PENDING_KEY, false)) {
                 "An earlier restore was incomplete. Import is blocked to protect partial data."
             }
-            // Both paths are read in the transaction before creating v1. A concurrent writer
-            // forces a retry and then rejection rather than overwriting a newly found backup.
             val payload = withContext(Dispatchers.IO) {
                 LocalRestore.exclusive {
                     check(matches(session)) { "Account changed; import canceled" }
@@ -535,10 +546,8 @@ object AuthManager {
                 db.runTransaction { transaction ->
                     check(matches(session)) { "Account changed; import canceled." }
                     val target = db.collection(BACKUPS).document(session.uid)
-                    val legacy = db.collection(LEGACY_BACKUPS).document(session.uid)
                     val current = transaction.get(target)
-                    val old = transaction.get(legacy)
-                    check(!current.exists() && !old.exists()) { "A backup appeared. Retry the server check; import did not overwrite it." }
+                    check(!current.exists()) { "A backup appeared. Retry the server check; import did not overwrite it." }
                     transaction.set(target, payload)
                     true
                 }.also { pendingUpload = it }.await()

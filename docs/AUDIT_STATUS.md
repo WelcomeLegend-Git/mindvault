@@ -51,9 +51,9 @@ source-review checklist, not a release certification.
 - Session helper tests do not prove end-to-end Firebase cancellation behavior. Already submitted Firestore writes can finish with their original snapshot after sign-out.
 - Existing global statistics are not a fully per-account database. Provenance stamps prevent silent cross-account uploads, but no destructive clearing or account migration was introduced.
 - Event-only accessibility evaluation, full overlay expiry reconciliation in every quiet-period case, comprehensive UI/accessibility review (TalkBack on notification quotes and overlay flows remain device checks), and device validation of midnight/checkpoint statistics still require work.
-- Verify deployed Firestore authorization rules for `backups_v1`; per-user document paths are not a substitute for server rules.
+- Deployed Firestore authorization rules match `backups/{userId}`. Collection restored to `backups` in v3.4.1 so queries succeed with existing deployed security rules.
 - Supply release credentials and verify certificate continuity with installed versions before distribution. Debug-signing continuity with the installed device build was verified via apksigner (2026-09-17); production distribution still requires the four `MINDVAULT_RELEASE_*` credentials.
-- New backups write to `backups_v1`; legacy `backups` documents are read-only migration sources. Verify server authorization for the new collection and migration/rollback behavior before rollout.
+- Backups write and read from authorized `backups` collection; type-safe JSON schema seamlessly decodes both legacy and tagged payloads.
 - Wrapper JAR checksum caveat: the current wrapper JAR matches official older-wrapper checksums, not the 8.13 JAR; verify against the distribution checksum and consider re-bootstrapping the wrapper.
 - Branch protection may need the new CI check names listed in docs/CI_SUPPLY_CHAIN.md.
 

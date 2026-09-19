@@ -1,7 +1,5 @@
 package com.example.mindvault.data
 
-internal typealias PreferenceImage = Map<String, Map<String, Any>>
-
 /** Single-process undo transaction. The caller must exclude ALL writers until this returns. */
 internal class RestoreTransaction(private val storage: Storage) {
     interface Storage {
